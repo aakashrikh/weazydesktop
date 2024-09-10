@@ -1,0 +1,129 @@
+{
+  "name": "weazy-billing",
+  "productName": "Weazy Billing",
+  "description": "New Way Of Billing",
+  "private": true,
+  "version": "2.2.0",
+  "type": "module",
+  "main": "electron.cjs",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development concurrently \"npm:serve\" \"npm:electron\"",
+    "prod": "npm run build && npm run electron-build",
+    "serve": "vite",
+    "build": "cross-env NODE_ENV=production vite build",
+    "preview": "vite preview",
+    "electron": "wait-on tcp:3000 && nodemon --exec electron . --watch .",
+    "electron-build": "cross-env NODE_ENV=production  electron-builder",
+    "rebuild-sqlite3": "electron-rebuild -f -w sqlite3",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "com.weazybilling.app",
+    "productName": "Weazy Billing",
+    "publish": {
+      "provider": "github",
+      "owner": "my-github-user",
+      "repo": "my-repo"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/icon/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "public/icon/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "public/icon/icon.ico",
+      "uninstallerIcon": "public/icon/icon.ico",
+      "uninstallDisplayName": "weazy-billing"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "asar": true,
+    "files": [
+      "build/**/*",
+      "src/**/*",
+      "public/**/*",
+      "electron.cjs",
+      "public/weazy.sqlite3"
+    ],
+    "extraResources": [
+      {
+        "from": "public/weazy.sqlite3",
+        "to": "weazy.sqlite3"
+      }
+    ],
+    "asarUnpack": [
+      "src/preload.cjs",
+      "src/management/main.cjs"
+    ]
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.14.3",
+    "@mui/material": "^5.14.3",
+    "@tauri-apps/api": "^1.4.0",
+    "@vitejs/plugin-legacy": "^5.4.2",
+    "antd": "^5.8.2",
+    "dotenv": "^16.4.5",
+    "electron-pos-printer": "^1.3.7",
+    "highcharts": "^11.2.0",
+    "highcharts-react-official": "^3.2.1",
+    "idb": "^8.0.0",
+    "keytar": "^7.9.0",
+    "moment": "^2.29.4",
+    "multiselect-react-dropdown": "^2.0.25",
+    "node-gyp": "^10.1.0",
+    "otp-timer": "^1.1.5",
+    "react": "^18.2.0",
+    "react-confetti-explosion": "^2.1.2",
+    "react-countdown": "^2.3.5",
+    "react-csv": "^2.2.2",
+    "react-dom": "^18.2.0",
+    "react-helmet": "^6.1.0",
+    "react-infinite-scroll-component": "^6.1.0",
+    "react-loader-spinner": "^5.3.4",
+    "react-loading-skeleton": "^3.3.1",
+    "react-onesignal": "^2.0.4",
+    "react-otp-input": "^3.0.4",
+    "react-owl-carousel": "^2.3.3",
+    "react-pro-sidebar": "^1.1.0-alpha.1",
+    "react-radio-buttons": "^1.2.2",
+    "react-responsive-modal": "^6.4.2",
+    "react-router-dom": "^6.14.2",
+    "react-secure-storage": "^1.3.2",
+    "react-select": "^5.8.0",
+    "react-tabs": "^6.0.2",
+    "react-to-print": "^2.14.13",
+    "rsuite": "^5.37.3",
+    "sonner": "^1.0.3",
+    "sqlite3": "5.0.11",
+    "sweetalert2": "^11.7.20"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.28",
+    "@types/react-dom": "^18.0.11",
+    "@vitejs/plugin-react": "^4.0.0",
+    "builder": "^5.0.0",
+    "concurrently": "^8.0.1",
+    "cross-env": "^7.0.3",
+    "electron": "^32.0.1",
+    "electron-builder": "^24.13.3",
+    "electron-rebuild": "^3.2.9",
+    "laravel-echo": "^1.16.0",
+    "nodemon": "^3.1.4",
+    "pusher-js": "^8.3.0",
+    "terser": "^5.31.6",
+    "vite": "^5.2.0",
+    "wait-on": "^7.0.1"
+  }
+}

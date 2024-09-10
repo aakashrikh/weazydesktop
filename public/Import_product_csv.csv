@@ -1,0 +1,2 @@
+product_name,category_name,product_price,tax,is_veg,description,image_link,product_type,variant1,variant_price1,variant2,variant_price2,variant3,variant_price3
+Demo Name,DemoCategory,100,5,1/0,Demo Description,https://dine-cdn.weazy.in/products/1662527000.jpg,product/package,quarter,100,half,200,full,300
