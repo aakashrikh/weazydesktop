@@ -323,7 +323,7 @@ try{
                             style={{ fontSize: '16px' }}
                           >
                             Welcome! <br />
-                            Happy to serve you.
+                           Thankyou for choosing
                             <br />
                             <small style={{ fontSize: '12px' }}>
                               Continue to WeazyDine Dashboard

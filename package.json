@@ -3,7 +3,8 @@
   "productName": "Weazy Billing",
   "description": "New Way Of Billing",
   "private": true,
-  "version": "2.2.1",
+  "version": "2.2.2",
+  "author": "Weazy Infotech Pvt. Ltd.",
   "type": "module",
   "main": "electron.cjs",
   "scripts": {
@@ -17,14 +18,17 @@
     "rebuild-sqlite3": "electron-rebuild -f -w sqlite3",
     "postinstall": "electron-builder install-app-deps"
   },
+  "repository": "https://github.com/aakashrikh/weazydesktop",
+  "publish": {
+    "provider": "github",
+    "owner": "aakashrikh",
+    "releaseType": "release",
+    "repo": "weazydesktop"
+  },
+
   "build": {
     "appId": "com.weazybilling.app",
     "productName": "Weazy Billing",
-    "publish": {
-      "provider": "github",
-      "owner": "aakashrikh",
-      "repo": "weazydesktop"
-    },
     "win": {
       "target": [
         "nsis"
