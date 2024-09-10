@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const keytar = require('keytar');
 require('dotenv').config();
-
+const { autoUpdater } = require('electron-updater');
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const preloadPath = isDevelopment
@@ -51,6 +51,7 @@ const createWindow = () => {
       splash.close();
     }
     win.show();
+    autoUpdater.checkForUpdatesAndNotify();
   });
 };
 
@@ -130,18 +131,33 @@ app.whenReady().then(() => {
   }
   });
 
-
-
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
-  console.log('Preload path:', preloadPath);
+
+
+  autoUpdater.on('update-available', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Update Available',
+      message: 'A new version of the application is available. Downloading now...',
+    });
+  });
+  
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Update Ready',
+      message: 'A new version has been downloaded. The application will now restart to apply the update.',
+    }).then(() => {
+      autoUpdater.quitAndInstall();
+    });
+
 });
 
-
+});
 
 // Save credentials (store as a JSON string)
 ipcMain.handle('save-credentials', async (event, service, credentialsString) => {
