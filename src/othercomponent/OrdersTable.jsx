@@ -4,8 +4,9 @@ import InfiniteScroll from 'react-infinite-scroll-component';
 import OrderDetailsDrawer from '../othercomponent/OrderDetailsDrawer';
 import InfiniteLoader from './InfiniteLoader';
 import PerUserOrder from '../pages/PerUserOrder';
-
+import { AuthContext } from '../AuthContextProvider';
 export class OrdersTable extends Component {
+  static contextType = AuthContext;
   constructor(props) {
     super(props);
     this.state = {
@@ -37,10 +38,14 @@ export class OrdersTable extends Component {
             <thead>
               <tr>
                 <th>S.no</th>
+                {
+                          this.context.role.stores.length>1  &&
+                  <th>Store Name</th>
+                }
                 <th>Order ID</th>
                 <th>Customer  </th>
                 <th>Contact</th>
-                <th>Order Price</th>
+                <th>Amount</th>
                 {
                   this.props.status == 'unsettled'&&
                   <>
@@ -50,8 +55,10 @@ export class OrdersTable extends Component {
 
                 }
                
+               
+                <th>Type</th>
+                <th>Source</th>
                 <th>Time</th>
-                <th>Order Type</th>
                 <th style={{ textAlign: 'end' }}>Status</th>
                 {/* <th style={{ textAlign: 'end' }}>Action</th> */}
               </tr>
@@ -60,6 +67,10 @@ export class OrdersTable extends Component {
               {this.props.data.map((item, index) => (
                 <tr key={index}>
                   <td>{index + 1}</td>
+                  { this.context.role.stores.length>1 &&
+                  <td>{item.vendor.shop_name}{'-'} {item.vendor.area}</td>
+                }
+
                   <td>
                     <p
                       onClick={() => {
@@ -73,7 +84,9 @@ export class OrdersTable extends Component {
                     </p>
                   </td>
                   <td>
-                    {item.user.user_uu_id === null ? (
+                    {
+                    item.user != null &&(
+                    item.user.user_uu_id === null ? (
                       'N/A'
                     ) : (
                       <div
@@ -86,11 +99,15 @@ export class OrdersTable extends Component {
                         className="cursor-pointer"
                       >
                         {item.user.name}
+                        
                       </div>
-                    )}
+                    )
+                  )}
                   </td>
                   <td>
-                    {item.user.contact !== '0000000000'
+                    {
+                    item.user != null &&
+                    item.user.contact !== '0000000000'
                       ? item.user.contact
                       : 'N/A'}
                   </td>
@@ -105,7 +122,7 @@ export class OrdersTable extends Component {
 
                 }
 
-                  <td>{moment(item.created_at).fromNow()}</td>
+                 
                   <td>
                     {item.order_type !== 'TakeAway' &&
                     item.order_type !== 'Delivery' ? (
@@ -114,6 +131,8 @@ export class OrdersTable extends Component {
                       <>{item.order_type}</>
                     )}
                   </td>
+                  <td>{item.channel}</td>
+                  <td>{moment(item.created_at).fromNow()}</td>
                   <td style={{ textAlign: 'end' }}>
                     {item.order_status === 'placed' ? (
                       <span

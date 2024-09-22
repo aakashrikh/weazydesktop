@@ -1,5 +1,5 @@
 import moment from 'moment';
-import React, { Component,createRef } from 'react';
+import React, { Component } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,7 +14,8 @@ import Loader from '../othercomponent/Loader';
 import { Button, DateRangePicker } from 'rsuite';
 import no_img from '../assets/images/no_product.webp';
 import Swal from 'sweetalert2';
-// const { ipcRenderer } = window.require('electron');
+import { Toggle } from '../othercomponent/Toggle';
+import { Start } from '@mui/icons-material';
 const options = {
   margin: 30,
   responsiveClass: true,
@@ -58,9 +59,6 @@ export class Dashboard extends Component {
       open: false,
       drawerOrderId: '',
     };
-
-    this.printRef = createRef(); // Correctly create a ref
-    this.handlePrint = this.handlePrint.bind(this);
   }
 
   static orderupdate(data) {
@@ -69,16 +67,6 @@ export class Dashboard extends Component {
     OngoingOrders.orderupdate(1)
 
 }
-
-handlePrint = () => {
-  const contentToPrint = this.printRef.current.innerHTML;
-  // Send the captured HTML content to the main process for printing
-  window.electron.send('print', contentToPrint);
-
-  // Use the exposed API from preload.js
-  // window.electron.send('print');
-}
-
   componentDidMount() {
     this.setState({ shop_status: this.context.user.shop_open });
     this.get_vendor_data(this.state.range, this.state.from, this.state.to);
@@ -86,12 +74,6 @@ handlePrint = () => {
     this.timerID = setInterval(() => {
       this.get_vendor_data(this.state.range, this.state.from, this.state.to);
     }, 10 * 1000);
-
-
-    window.electron.receive('fromMain', (message) => {
-      console.log(message); // Should log "Print command received"
-    });
-
   }
 
   componentWillUnmount() {
@@ -164,7 +146,6 @@ handlePrint = () => {
     const { item, activeStep, steps } = this.state;
     return (
       <>
-      
         <Helmet>
           {this.context.user.shop_name === null ||
           this.context.user.shop_name === '' ? (
@@ -180,82 +161,17 @@ handlePrint = () => {
             {this.context.step === 'steps' ? (
               <SetupAccount />
             ) : (
-              <div className="content">
-                {/* {document.cookie.indexOf('hide_banner=1') === -1 && (
-                  <div className="dashboard-status-card-slider">
-                    <div className="banner-slider-close-button">
-                      <button
-                        className="close-button"
-                        onClick={() => {
-                          Swal.fire({
-                            title: 'Are you sure?',
-                            text: 'You want to hide the banners? We will be back in a couple of days.',
-                            showCancelButton: true,
-                            confirmButtonText: 'Yes, Hide it!',
-                            cancelButtonText: 'No, keep it',
-                            confirmButtonColor: '#0066b2',
-                            cancelButtonColor: '#d33',
-                          }).then((result) => {
-                            if (result.isConfirmed) {
-                              var d = new Date();
-                              d.setTime(d.getTime() + 2 * 24 * 60 * 60 * 1000);
-                              var expires = 'expires=' + d.toUTCString();
-                              document.cookie =
-                                'hide_banner=1;' + expires + ';path=/';
-                              document.querySelector(
-                                '.dashboard-status-card-slider'
-                              ).style.display = 'none';
-                            }
-                          });
-                        }}
-                      >
-                        <i className="fa fa-times"></i>
-                      </button>
-                    </div>
-                    <OwlCarousel className="owl-theme" {...options}>
-                      <div className="dashboard_items_single">
-                        <a
-                          href="https://webixun.com/contact-us.html"
-                          target="_blank"
-                        >
-                          <img src={img1} alt="img" />
-                        </a>
-                      </div>
-                      <div className="dashboard_items_single">
-                        <a
-                          href="https://webixun.com/contact-us.html"
-                          target="_blank"
-                        >
-                          <img src={img2} alt="img" />
-                        </a>
-                      </div>
-                      <div className="dashboard_items_single">
-                        <a
-                          href="https://webixun.com/contact-us.html"
-                          target="_blank"
-                        >
-                          <img src={img3} alt="img" />
-                        </a>
-                      </div>
-                      <div className="dashboard_items_single">
-                        <a
-                          href="https://webixun.com/contact-us.html"
-                          target="_blank"
-                        >
-                          <img src={img4} alt="img" />
-                        </a>
-                      </div>
-                    </OwlCarousel>
-                  </div>
-                )} */}
 
+              
+                this.context.is_enterprise ? <Enterprise /> :
+                <>
+              <div className="content">
                 <div className="dashboard-status-card">
                   <div className="row w-100">
                     <>
                       <div className="page-header">
                         <div className="page-title">
-                          <h4>Orders Overviews</h4>
-      
+                          <h4>Orders Overview</h4>
                         </div>
 
                         <div className="page-btn">
@@ -376,6 +292,8 @@ handlePrint = () => {
 
                 {/* <ProductReport /> */}
               </div>
+    <Insights />
+    </>
             )}
           </div>
         </div>
@@ -394,7 +312,7 @@ handlePrint = () => {
             </div>
           </div>
         )}
-     <Insights />
+ 
         </>
       </>
     );
@@ -402,7 +320,294 @@ handlePrint = () => {
 }
 
 
-class OngoingOrders extends Component {
+class Enterprise extends Component
+{
+  static contextType = AuthContext;
+  constructor(props)
+  {
+    super(props);
+
+    this.state = {
+      isloading:true,
+      outlets:[],
+      data:[],
+      total_sales:0,
+      outletloading:false
+    }
+  }
+
+  componentDidMount()
+  {
+    this.get_dashboard_report();
+  }
+
+
+  get_dashboard_report = () => {
+    fetch(api + 'get_outlet_insides', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: this.context.token,
+      },
+      body: JSON.stringify({
+   
+        start_date: moment().format('YYYY-MM-DD'),
+        end_date: moment().format('YYYY-MM-DD'),
+      }),
+    })
+      .then((response) => response.json())
+      .then((json) => {
+        if (json.status) {
+          this.setState({
+            outlets: json.outlets,
+            data: json.data,
+            total_sales:json.total_sales,
+            // isloading:false
+          })
+        } else {
+          toast.error(json.msg);
+          // this.setState({ shop_status: this.context.user.shop_open });
+        }
+        return json;
+      })
+      .catch((error) => console.error(error))
+      .finally(() => {
+        this.setState({ isloading: false });
+      });
+  };
+
+
+  change_location = (e)=>
+    {
+      this.setState({outletloading:true})
+     fetch(api + 'switch_store', {
+       method: 'POST',
+       headers: {
+         Accept: 'application/json',
+         'Content-Type': 'application/json',
+         Authorization: this.context.token,
+       },
+       body: JSON.stringify({
+         store_id: e
+       }),
+     })
+       .then((response) => response.json())
+       .then((json) => {
+         if (json.msg === 'ok') {
+ 
+           var steps = 'done';
+           const data = {
+             token: json.token,
+             vendor_id: json.usr,
+             step: 'done',
+           };
+           localStorage.setItem('@auth_login', JSON.stringify(data));
+           window.location.reload();
+           toast.success('You are now in this store!');
+         } else {
+           toast.error(json.msg);
+         }
+         return json;
+       })
+       .catch((error) => console.error(error))
+       .finally(() => {
+        this.setState({outletloading:false})
+       });
+   }
+
+
+  render() {
+    return (
+      <>
+          <div className="content">
+                <div className="dashboard-status-card">
+                  <div className="row w-100">
+                    <>
+                    <h2>Hi' {this.context.role.staff_name}</h2>
+                    <p>Welcome to Weazy, we are happy to serve you!.</p>
+                      <div className="page-header">
+                        {/* <div className="page-title">
+                          <h4>Stores</h4>
+                        </div> */}
+                      </div>
+               
+               <Requests />
+                        <div className='col-5' >
+                            <div className="card" style={{minHeight:'400px'}}>
+                              <div className="card-body">
+                                {
+                                  this.state.isloading ? <Skeletonloader count={5} height={60} /> :
+                            <>
+                                <div className='row'>
+                                  <div className='col-9'>
+                                  <h4>Daily Stats</h4>
+                                <span>{moment().format('dddd,  Do MMM YYYY')}</span>
+
+                                <h2>₹  {this.state.total_sales}</h2>
+                              </div>
+                              <div className='col-3'>
+                                <br/>
+                              <i class="iconly-Activity icli sidebar_icons" style={{fontSize:'60px',color:'#0066b2'}} ></i>
+                                </div>
+                                </div>
+                               
+                                <br/>
+                                <div className='row'>
+                                {
+                                    this.state.data.map((item, index) => {
+                             
+                                      return(
+
+                                        <div className='col-6 stats' key={index}>
+      
+                                              {Object.entries(item).map(([key, value]) => (
+                                                <div key={key}><span>{key.replace('_', ' ')}</span>
+                                                <h4 > {value}</h4>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                             )}
+                                        
+                                            )
+                                             
+                                  }
+                              
+                                 {/* <div className='col-6 stats'>
+                                 <span>Request</span>
+                                 <h4>2637</h4>
+                                 </div> */}
+
+                                </div>
+                             </>
+  }
+                              </div>
+                            </div>
+                        </div>
+
+
+                        <div className='col-7'>
+                            <div className="card" style={{maxHeight:'400px',minHeight:'400px',overflow:'scroll',}}>
+                              <div className="card-body" >
+                               {
+                                 this.state.isloading ? <Skeletonloader count={5} height={60} /> :
+                              
+                                        this.state.outlets.map((item, index) => (
+                                          <div className='row'>
+                                          <div className='col-6 stats one'>
+                                          <span>{item.shop_name}</span>
+                                          <h6>{item.area}</h6>
+                                          </div>
+                                          <div className='col-2 stats'>
+                                          <span>Sales</span>
+                                          <h6>{item.total_sales}</h6>
+                                          </div>
+
+                                          <div className='col-2 stats'>
+                                          <span>Orders</span>
+                                          <h6>{item.total_orders}</h6>
+                                          </div>
+                                          <div className='col-2 stats'>
+                                          <span>Discount</span>
+                                          <h6>{item.total_discount}</h6>
+                                          </div>
+                                          </div>
+                                       
+                                        ))
+                                }
+
+
+
+                                 
+                              
+
+                              </div>
+                            </div>
+                        </div>
+                   
+                    
+                    </>
+                  </div>
+                </div>
+              </div>
+    
+        <div className="content" style={{ paddingTop: '0px' }}>
+                <div className="dashboard-status-card">
+                  <div className="row w-100">
+                    <>
+                      <div className="page-header">
+                        <div className="page-title">
+                          <h4>Outlets</h4>
+                        </div>
+                      </div>
+                    {       
+                                 this.state.isloading ? <Skeletonloader count={1} height={150} /> :
+                      
+                      this.state.outlets.map((item, index) => (
+                        <div className='col-4'>
+                            <div className="card">
+                              <div className="card-body">
+                                <div className='row  stats one'>
+                                  <div className='col-10'>
+                                  <h4>{item.shop_name}</h4>
+                                  <p>{item.area}</p>
+                                 
+                                  </div>
+                                  <div className='col-2'>
+                                   
+                                  <Toggle
+                                             id={index }
+                                            status={item.status
+                                            }
+                                            product_id={item.vendor_uu_id}
+                                            action_type={
+                                              'store'
+                                            }
+                                          />
+
+                                    </div>
+                                </div>
+                                <br/>
+                                <div className='row'>
+                            
+                                  <div className='col-8'>
+                                    {
+                                      item.last_order_created_at != null ?
+                                      <span>Last Order {moment(item.last_order_created_at).fromNow()}</span> :
+                                      <span>No Orders Yet</span>
+                                    }
+                   
+                                    </div>
+
+                                    <div className='col-4'>
+                                      {
+                                        this.state.outletloading ?  
+                                        <button  disabled className='btn btn-primary'>Loading ...</button>
+                                        :
+                                        <button  onClick={()=>this.change_location(item.vendor_uu_id)} className='btn btn-primary'>Open</button>
+                                      }
+                                    {/* <button  onClick={()=>this.change_location(item.vendor_uu_id)} className='btn btn-primary'>Open</button> */}
+                                    </div>
+                                </div>
+                             
+                              </div>
+                            </div>
+                        </div>
+                      ))
+                    }
+                    
+                    </>
+                  </div>
+                </div>
+              </div>
+
+              </>
+    )
+  }
+    
+}
+
+class Requests extends Component {
   static contextType = AuthContext;
   constructor(props) {
     super(props);
@@ -417,28 +622,19 @@ class OngoingOrders extends Component {
   }
 
   componentDidMount() {
-    this.fetch_order(1);
-
-    if (['admin', 'owner'].includes(this.context.role.staff_role)) {
+    if (['admin', 'owner','manager'].includes(this.context.role.staff_role)) {
     this.fetch_request();
     }
     this.timerID = setInterval(() => {
-      this.fetch_order(1);
-      if (['admin', 'owner'].includes(this.context.role.staff_role)) {
+      if (['admin', 'owner','manager'].includes(this.context.role.staff_role)) {
         this.fetch_request();
         }
     }, 10 * 1000);
   }
 
+
   componentWillUnmount() {
     clearInterval(this.timerID);
-  }
-
-  static orderupdate()
-  {
-    const instance = new OngoingOrders();
-        // Call the normal method
-        instance.fetch_order(1);
   }
 
   fetch_request = () => {
@@ -470,175 +666,58 @@ class OngoingOrders extends Component {
   };
 
 
-   fetch_order = (page_id) => {
-    fetch(api + 'get_orders_vendor', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: this.context.token,
-      },
-      body: JSON.stringify({
-        page: page_id,
-        status: 'placed',
-      }),
-    })
-      .then((response) => response.json())
-      .then((json) => {
-        if (!json.status) {
-          this.setState({ orders: [] });
-        } else {
-          this.setState({ orders: json.data.data });
-        }
-        this.setState({ is_loading: false });
-        return json;
-      })
-      .catch((error) => {
-        console.error(error);
-      })
-      .finally(() => {});
-  };
-
-
   action_request = (type) =>
-  {
-    if(this.state.type == 'reject')
     {
-      if(this.state.comment == '')
+      if(this.state.type == 'reject')
       {
-        toast.error("Please add comment")
-        return
-      }
-    }
-    
-    this.setState({request_loading:true})
-    fetch(api + 'action_approval_request', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: this.context.token,
-      },
-      body: JSON.stringify({
-        request_id: this.state.open_request.id,
-        request_status: type,
-        comment: this.state.comment
-      }),
-    })
-      .then((response) => response.json())
-      .then((json) => {
-        if (!json.status) {
-          toast.error(json.msg);
-        } else {
-          toast.success(json.msg);
-          this.setState({requestModel:false,comment:''});
-          this.fetch_request();
-  
+        if(this.state.comment == '')
+        {
+          toast.error("Please add comment")
+          return
         }
-        this.setState({request_loading: false });
-        return json;
+      }
+      
+      this.setState({request_loading:true})
+      fetch(api + 'action_approval_request', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: this.context.token,
+        },
+        body: JSON.stringify({
+          request_id: this.state.open_request.id,
+          request_status: type,
+          comment: this.state.comment
+        }),
       })
-      .catch((error) => {
-        console.error(error);
-      })
-      .finally(() => {});
-  }
-  render() {
-    return (
-      <>
-      {
-      this.state.orders.length > 0 && (
-        <div className="dashboard-status-card">
-          <div className="row mb-4 w-100">
-            <div className="col-md-12">
-              {this.state.orders.length > 0 ? (
-                <>
-                  <div className="page-header">
-                    <div className="page-title">
-                      <h4>Pending Orders</h4>
-                    </div>
-                  </div>
-                  <div className="table-responsive dataview">
-                    <table className="table datatable ">
-                      <thead>
-                        <tr>
-                          <th>Sno</th>
-                          <th>Order ID</th>
-                          <th>Order Type</th>
-                          <th>Name</th>
-                          <th>Contact</th>
-                          <th>Time</th>
-                          <th>Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {this.state.orders.length > 0 &&
-                          this.state.orders.map((values, index) => {
-                            return (
-                              <tr key={index}>
-                                <td>{index + 1}</td>
-                                <td
-                                  className="cursor-pointer"
-                                  onClick={() => {
-                                    this.setState({
-                                      open: true,
-                                      drawerOrderId: values.order_code,
-                                    });
-                                  }}
-                                >
-                                  {/* <Link
-                                    to={'/orderdetails/' + values.order_code}
-                                  > */}
-                                  {values.bill_no}
-                                  {/* </Link> */}
-                                </td>
-                                <td
-                                  style={{
-                                    textTransform: 'capitalize',
-                                  }}
-                                >
-                                  {values.order_type == 'TakeAway' ||
-                                  values.order_type == 'Delivery' ? (
-                                    <span>{values.order_type}</span>
-                                  ) : (
-                                    <>Dine-In</>
-                                  )}
-                                </td>
-                                <td>
-                                  {values.user.name === 'null'
-                                    ? 'N/A'
-                                    : values.user.name}
-                                </td>
-                                <td>{values.user.contact}</td>
-                                <td>
-                                  {moment(values.updated_at).format('llll')}
-                                </td>
-                                <td>₹ {values.total_amount}</td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <OrderDetailsDrawer
-                    drawerOrderId={this.state.drawerOrderId}
-                    open={this.state.open}
-                    onClose={() => this.setState({ open: false })}
-                  />
-                </>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )
+        .then((response) => response.json())
+        .then((json) => {
+          if (!json.status) {
+            toast.error(json.msg);
+          } else {
+            toast.success(json.msg);
+            this.setState({requestModel:false,comment:''});
+            this.fetch_request();
+    
+          }
+          this.setState({request_loading: false });
+          return json;
+        })
+        .catch((error) => {
+          console.error(error);
+        })
+        .finally(() => {});
     }
 
-{
+  render() {
+  return(
+    <>
+    {
       this.state.request.length > 0 && (
         <div className="dashboard-status-card">
-          <div className="row mb-4 w-100">
-            <div className="col-md-12">
+          <div className="card  row mb-4 w-100">
+            <div className="  card-body col-md-12">
               {this.state.request.length > 0 ? (
                 <>
                   <div className="page-header">
@@ -651,6 +730,7 @@ class OngoingOrders extends Component {
                       <thead>
                         <tr>
                           <th>Sno</th>
+                          <th>Outlet</th>
                           <th>Request</th>
                           <th>Date</th>
                           <th>action</th>
@@ -662,6 +742,7 @@ class OngoingOrders extends Component {
                             return (
                               <tr key={index}>
                                 <td>{index + 1}</td>
+                                <td>{rr.vendor.shop_name} - {rr.vendor.area}</td>
                                 <td>{rr.action}
 
                                 {
@@ -927,6 +1008,168 @@ class OngoingOrders extends Component {
         
       )
     }
+</>
+  )
+  }
+}
+
+
+class OngoingOrders extends Component {
+  static contextType = AuthContext;
+  constructor(props) {
+    super(props);
+    this.state = {
+      orders: [],
+      request:[],
+      open_request:[],
+      open:false,
+      comment:'',
+      requestModel:false,
+    };
+  }
+
+  componentDidMount() {
+    this.timerID = setInterval(() => {
+      this.fetch_order(1);
+     
+    }, 10 * 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.timerID);
+  }
+
+  static orderupdate()
+  {
+    const instance = new OngoingOrders();
+        // Call the normal method
+        instance.fetch_order(1);
+  }
+
+
+   fetch_order = (page_id) => {
+    fetch(api + 'get_orders_vendor', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: this.context.token,
+      },
+      body: JSON.stringify({
+        page: page_id,
+        status: 'placed',
+      }),
+    })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!json.status) {
+          this.setState({ orders: [] });
+        } else {
+          this.setState({ orders: json.data.data });
+        }
+        this.setState({ is_loading: false });
+        return json;
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {});
+  };
+
+
+
+  render() {
+    return (
+      <>
+      {
+      this.state.orders.length > 0 && (
+        <div className="dashboard-status-card">
+          <div className="row mb-4 w-100">
+            <div className="col-md-12">
+              {this.state.orders.length > 0 ? (
+                <>
+                  <div className="page-header">
+                    <div className="page-title">
+                      <h4>Pending Orders</h4>
+                    </div>
+                  </div>
+                  <div className="table-responsive dataview">
+                    <table className="table datatable ">
+                      <thead>
+                        <tr>
+                          <th>Sno</th>
+                          <th>Order ID</th>
+                          <th>Order Type</th>
+                          <th>Name</th>
+                          <th>Contact</th>
+                          <th>Time</th>
+                          <th>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {this.state.orders.length > 0 &&
+                          this.state.orders.map((values, index) => {
+                            return (
+                              <tr key={index}>
+                                <td>{index + 1}</td>
+                                <td
+                                  className="cursor-pointer"
+                                  onClick={() => {
+                                    this.setState({
+                                      open: true,
+                                      drawerOrderId: values.order_code,
+                                    });
+                                  }}
+                                >
+                                  {/* <Link
+                                    to={'/orderdetails/' + values.order_code}
+                                  > */}
+                                  {values.bill_no}
+                                  {/* </Link> */}
+                                </td>
+                                <td
+                                  style={{
+                                    textTransform: 'capitalize',
+                                  }}
+                                >
+                                  {values.order_type == 'TakeAway' ||
+                                  values.order_type == 'Delivery' ? (
+                                    <span>{values.order_type}</span>
+                                  ) : (
+                                    <>Dine-In</>
+                                  )}
+                                </td>
+                                <td>
+                                  {values.user.name === 'null'
+                                    ? 'N/A'
+                                    : values.user.name}
+                                </td>
+                                <td>{values.user.contact}</td>
+                                <td>
+                                  {moment(values.updated_at).format('llll')}
+                                </td>
+                                <td>₹ {values.total_amount}</td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                 
+
+                  <OrderDetailsDrawer
+                    drawerOrderId={this.state.drawerOrderId}
+                    open={this.state.open}
+                    onClose={() => this.setState({ open: false })}
+                  />
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )
+    }
+   <Requests />
+
     
       </>
       
@@ -1415,7 +1658,7 @@ class Insights extends Component {
       .then((response) => response.json())
       .then((responseJson) => {
         this.setState({
-          // products: responseJson.data.data,
+          products: responseJson.data.data,
           isloading: false,
         });
       })
@@ -1470,9 +1713,9 @@ class Insights extends Component {
     return (
       <>
        
-        <div className="main-wrappers" style={{marginTop:'-100px'}}>
+        <div className="" style={{marginTop:'-50px'}}>
           <Header sidebar={true} />
-          <div className="page-wrapper">
+          <div className="">
             <div className="content">
               {this.state.isloading ? (
                 <Loader />

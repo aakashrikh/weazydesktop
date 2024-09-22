@@ -20,7 +20,6 @@ function createSplashWindow() {
     alwaysOnTop: true,
   });
 
-  
   splash.loadFile(path.join(__dirname, './src/splash.html'));
 }
 
@@ -58,77 +57,71 @@ const createWindow = () => {
 app.whenReady().then(() => {
   createSplashWindow();
   createWindow();
-  
+
   let cssContent = '';
 
   try {
     const cssFilePath = isDevelopment
       ? path.resolve(__dirname, 'src', 'style.css')
       : path.resolve(process.resourcesPath, 'app.asar', 'src', 'style.css');
-    
+
     cssContent = fs.readFileSync(cssFilePath, 'utf8');
   } catch (error) {
     console.error('Error reading CSS file:', error);
   }
-  
 
   ipcMain.on('print', (event, content) => {
     try {
-    const printWindow = new BrowserWindow({ 
-      // width: 800,
-      // height: 600,
-      show: false,
-     });
+      const printWindow = new BrowserWindow({
+        show: false,
+      });
 
-    printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
-      <html>
-      <head>
-        <style>
-        ${cssContent}
-        </style>
-      </head>
-      <body>
-        ${content}
-      </body>
-      </html>
-    `)}`);
+      printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
+        <html>
+        <head>
+          <style>
+          ${cssContent}
+          </style>
+        </head>
+        <body>
+          ${content}
+        </body>
+        </html>
+      `)}`);
 
-    
-    printWindow.once('ready-to-show', () => {
-      try {
-      const options = {
-        silent: true,
-        printBackground: true,
-        margins: {
-          marginType: 'none',
-        }
-      };
+      printWindow.once('ready-to-show', () => {
+        try {
+          const options = {
+            silent: true,
+            printBackground: true,
+            margins: {
+              marginType: 'none',
+            },
+          };
 
-      
-      event.sender.send('fromMain', 'Print command received');
+          event.sender.send('fromMain', 'Print command received');
 
-      printWindow.webContents.print(options, (success, failureReason) => {
-        if (!success) {
-          console.log("Print failed:", failureReason);
-          
-        } else {
-          console.log('Print initiated successfully');
+          printWindow.webContents.print(options, (success, failureReason) => {
+            if (!success) {
+              console.log("Print failed:", failureReason);
+            } else {
+              console.log('Print initiated successfully');
+            }
+          });
+        } catch (error) {
+          console.error('Error during print process:', error);
+          event.sender.send('print-error', `Print process error: ${error.message}`);
         }
       });
-    } catch (error) {
-      console.error('Error during print process:', error);
-      event.sender.send('print-error', `Print process error: ${error.message}`);
-    }
-    });
 
-    printWindow.on('error', (error) => {
-      console.error('Print window error:', error);
-      event.sender.send('print-error', `Print window error: ${error.message}`);
-    });
-  } catch (error) {
-    console.error('Print operation failed:', error);
-    event.sender.send('print-error', `Print operation failed: ${error.message}`);
-  }
+      printWindow.on('error', (error) => {
+        console.error('Print window error:', error);
+        event.sender.send('print-error', `Print window error: ${error.message}`);
+      });
+    } catch (error) {
+      console.error('Print operation failed:', error);
+      event.sender.send('print-error', `Print operation failed: ${error.message}`);
+    }
   });
 
   app.on('activate', () => {
@@ -137,7 +130,6 @@ app.whenReady().then(() => {
     }
   });
 
-
   autoUpdater.on('update-available', () => {
     dialog.showMessageBox({
       type: 'info',
@@ -145,7 +137,7 @@ app.whenReady().then(() => {
       message: 'A new version of the application is available. Downloading now...',
     });
   });
-  
+
   autoUpdater.on('update-downloaded', () => {
     dialog.showMessageBox({
       type: 'info',
@@ -154,9 +146,7 @@ app.whenReady().then(() => {
     }).then(() => {
       autoUpdater.quitAndInstall();
     });
-
-});
-
+  });
 });
 
 // Save credentials (store as a JSON string)
@@ -196,7 +186,6 @@ ipcMain.handle('delete-credentials', async (event, service) => {
     return { status: 'error', message: error.message };
   }
 });
-
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

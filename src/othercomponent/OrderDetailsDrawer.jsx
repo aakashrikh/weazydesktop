@@ -1280,10 +1280,10 @@ this.printkot = createRef();
                                 {this.state.transaction_details.length == 1 ? (
                                   <span>
                                     {'  '}
-                                    {
+                                    <b style={{fontWeight: 'bold'}}>{
                                       this.state.transaction_details[0]
                                         .txn_method
-                                    }{' '}
+                                    }</b>{' '}
                                     - ₹{' '}
                                     {
                                       this.state.transaction_details[0]
@@ -1301,10 +1301,11 @@ this.printkot = createRef();
                                     )}
                                     <br />
                                     Date:{' '}
-                                    {moment(
+                                   <b style={{fontWeight: 'bold'}}> {moment(
                                       this.state.transaction_details[0]
                                         .created_at
                                     ).format('llll')}
+                                    </b>
                                   </span>
                                 ) : (
                                   <>

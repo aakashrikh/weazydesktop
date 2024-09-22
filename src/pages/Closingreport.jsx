@@ -137,7 +137,7 @@ class Closingreport extends Component {
 
   fetch_csv = () => {
     this.setState({ download_csv: true });
-    fetch(api + 'fetch_sales_reports', {
+    fetch(api + 'fetch_closing_reports', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -150,7 +150,7 @@ class Closingreport extends Component {
         start_date: this.state.from,
         end_date: this.state.to,
         method: this.state.method,
-        page_length: 'all',
+        page_length: "all",
         store: this.state.store
       }),
     })
@@ -170,7 +170,7 @@ class Closingreport extends Component {
     const data = this.context.role.stores.map((item, index) => (
       
       {
-      label: item.shop_name == null ? 'N/A' : item.shop_name,
+      label: item.shop_name == null ? 'N/A' : item.shop_name + '-' + item.area,
       value: item.vendor_uu_id,
     }));
 
@@ -293,7 +293,9 @@ class Closingreport extends Component {
                 this.context.role.stores.length>1 && 
             <li className="nav-item">
                   {/* <label>Select Store</label> */}
-                         <br/>
+                  <label>Outlets</label>
+                  <br/>
+                      
                           <CheckPicker
                             data={data}
                             style={{ width: '250px' }}
@@ -392,7 +394,7 @@ class Closingreport extends Component {
                                 <tr>
                                   <th>S.no</th>
                                   {
-                                      this.context.role.stores.length>1 ? <th>Store</th>:null
+                                      this.context.role.stores.length>1 ? <th>Outlet</th>:null
                                     }
                                   <th>Date</th>
                                   <th>Bills</th>
@@ -414,7 +416,7 @@ class Closingreport extends Component {
                                   <tr>
                                     <td>{index + 1}</td>
                                     {
-                                          this.context.role.stores.length>1 ? <td>{item.shop_name	}</td>:null
+                                          this.context.role.stores.length>1 ? <td>{item.shop_name	}  - {item.area} </td>:null
                                         }
                                     <td>{moment(item.order_date).format('DD-MMM-YYYY')}</td>
                                     <td>{item.bills}</td>

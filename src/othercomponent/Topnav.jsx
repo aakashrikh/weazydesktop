@@ -84,6 +84,16 @@ const report = [
     link: 'closingreport',
   },
   {
+    id: 13,
+    name: 'Discount',
+    link: 'discountreport',
+  },
+  {
+    id: 13,
+    name: 'Cancellation Report',
+    link: 'cancellationreport',
+  },
+  {
     id: 14,
     name: 'Product Report',
     link: 'productreport',
@@ -138,7 +148,7 @@ const setup = [
   // },
   {
     id: 21,
-    name: 'Store Profile',
+    name: 'Outlet Profile',
     link: 'editprofile',
   },
   {
@@ -153,7 +163,7 @@ const setup = [
   },
   {
     id: 23,
-    name: 'Store Timings',
+    name: 'Outlet Timings',
     link: 'updatetiming',
   },
   // {

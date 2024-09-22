@@ -868,8 +868,201 @@ export class Orderdetails extends Component {
                             </div>
                           </div>
                         ) : null}
-                       
-                     
+                        {this.state.data.order_status != 'cancelled' && (
+                          <div className="d-flex align-items-center justify-content-center flex-wrap">
+                            {os != 'Windows' && os != 'Mac OS' ? (
+                              <>
+                                {this.state.print_receipt == 'gen_receipt' ? (
+                                  <a
+                                    className="btn btn-secondary me-2 w-50 d-flex align-items-center justify-content-center "
+                                    onClick={() => {
+                                      if (os == 'Windows' || os == 'Mac OS') {
+                                        window.open(
+                                          api +
+                                            this.state.data.order_code +
+                                            '/bill.pdf',
+                                          'PRINT',
+                                          'height=400,width=600'
+                                        );
+                                      } else {
+                                        this.sendUrlToPrint(
+                                          api +
+                                            this.state.data.order_code +
+                                            '/bill.pdf'
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
+                                    <p>Print Receipt</p>
+                                  </a>
+                                ) : (
+                                  <a
+                                    className="btn btn-secondary me-2 w-45 d-flex align-items-center justify-content-center "
+                                    onClick={() => {
+                                      Swal.fire({
+                                        title: 'Are you sure',
+                                        text: 'You want to generate receipt, you will not be able to edit the order after this?',
+                                        showCancelButton: true,
+                                        confirmButtonColor: '#0066b2',
+                                        cancelButtonColor: '#d33',
+                                        confirmButtonText: 'Yes, generate it!',
+                                      }).then((result) => {
+                                        if (result.isConfirmed) {
+                                          this.genrate_receipt();
+                                        }
+                                      });
+                                    }}
+                                  >
+                                    Generate Receipt
+                                  </a>
+                                )}
+
+                                {this.state.data.order_status !=
+                                  'completed' && (
+                                  <a
+                                    className="btn btn-secondary w-50 d-flex align-items-center justify-content-center"
+                                    onClick={() => {
+                                      if (os == 'Windows' || os == 'Mac OS') {
+                                        window.open(
+                                          api +
+                                            this.state.data.order_code +
+                                            '/kot.pdf',
+                                          'PRINT',
+                                          'height=400,width=600'
+                                        );
+                                      } else {
+                                        this.sendUrlToPrint(
+                                          api +
+                                            this.state.data.order_code +
+                                            '/kot.pdf'
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
+                                    <p>Print KOT</p>
+                                  </a>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {this.state.data.order_type !== 'TakeAway' ? (
+                                  this.state.print_receipt == 'gen_receipt' ? (
+                                    <ReactToPrint
+                                      trigger={() => (
+                                        <a className="btn btn-secondary w-45 d-flex align-items-center justify-content-center button-secondary-color">
+                                          <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
+                                          <p>Print Receipt</p>
+                                        </a>
+                                      )}
+                                      content={() => this.componentRef2}
+                                    />
+                                  ) : (
+                                    <a
+                                      className="btn btn-secondary me-2 w-45 d-flex align-items-center justify-content-center "
+                                      onClick={() => {
+                                        Swal.fire({
+                                          title: 'Are you sure',
+                                          text: 'You want to generate receipt, you will not be able to edit the order after this?',
+                                          showCancelButton: true,
+                                          confirmButtonColor: '#0066b2',
+                                          cancelButtonColor: '#d33',
+                                          confirmButtonText:
+                                            'Yes, generate it!',
+                                        }).then((result) => {
+                                          if (result.isConfirmed) {
+                                            this.genrate_receipt();
+                                          }
+                                        });
+                                      }}
+                                    >
+                                      Generate Receipt
+                                    </a>
+                                  )
+                                ) : (
+                                  <ReactToPrint
+                                    trigger={() => (
+                                      <a className="btn btn-secondary w-45 d-flex align-items-center justify-content-center button-secondary-color">
+                                        <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
+                                        <p>Print Receipt</p>
+                                      </a>
+                                    )}
+                                    content={() => this.componentRef2}
+                                  />
+                                )}
+
+                                {/* <ReactToPrint
+                              trigger={() => (
+                                <a className="btn btn-secondary w-45 d-flex align-items-center justify-content-center button-secondary-color">
+                                  <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
+
+                                  <p>
+                                    Print KOT
+                                    {this.state.data.kot.length > 1 && (
+                                      <span> - All</span>
+                                    )}
+                                  </p>
+                                </a>
+                              )}
+                              content={() => this.componentRef['all']}
+                            /> */}
+                                {this.state.data.order_status != 'completed' &&
+                                this.state.data.kot.length > 0 ? (
+                                  this.state.data.kot.map((kot, index) => (
+                                    <>
+                                      <br />
+                                      <ReactToPrint
+                                        trigger={() => (
+                                          <a className="btn btn-secondary w-45 d-flex align-items-center justify-content-center">
+                                            <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
+                                            <p>Print KOT - {kot.kot}</p>
+                                          </a>
+                                        )}
+                                        content={() => {
+                                          return this.componentRef[index];
+                                        }}
+                                        key={index}
+                                      />
+                                    </>
+                                  ))
+                                ) : (
+                                  <></>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
+                        <div
+                          style={{
+                            display: 'none',
+                          }}
+                        >
+                          {this.state.data.kot.length > 0 ? (
+                            <PrintKot
+                              ref={(el) => (this.componentRef['all'] = el)}
+                              order={this.state.data}
+                              kot={this.state.data.kot[0].kot}
+                            />
+                          ) : null}
+
+                          {this.state.data.kot.length > 0 ? (
+                            this.state.data.kot.map((kot, index) => (
+                              <PrintKot
+                                ref={(el) => (this.componentRef[index] = el)}
+                                id={index}
+                                order={this.state.data}
+                                kot={kot.kot}
+                              />
+                            ))
+                          ) : (
+                            <></>
+                          )}
+                          <PrintReceipt
+                            ref={(el2) => (this.componentRef2 = el2)}
+                            order={this.state.data}
+                          />
+                        </div>
                       </div>
                     </div>
                   </section>

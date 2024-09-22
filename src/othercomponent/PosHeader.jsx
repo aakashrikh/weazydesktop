@@ -3,7 +3,7 @@ import { RadioButton, RadioGroup } from 'react-radio-buttons';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../AuthContextProvider';
 import pos_logo from '../assets/images/logos/main_logo_black.png';
-
+import { Drawer,SelectPicker } from 'rsuite';
 export class Header extends Component {
   static contextType = AuthContext;
   constructor(props) {
@@ -18,6 +18,8 @@ export class Header extends Component {
   }
 
   render() {
+   
+
     return (
       <div
         className="header w-100 "
@@ -42,12 +44,16 @@ export class Header extends Component {
           </div>
         </div>
 
+
+
         <ul
           className="nav user-menu d-flex justify-content-end pe-0"
           style={{
             width: '40%',
           }}
         >
+          
+
           <RadioGroup
             value={this.props.order_method}
             onChange={(e) => {

@@ -335,7 +335,6 @@ export class Insights extends Component {
             next_page: json.data.next_page_url,
           });
           if (page_id == 1) {
-        
             this.setState({
               data: json.data.data,
               total: json.total,
@@ -646,7 +645,7 @@ export class Insights extends Component {
                                   
                                   <span className="counters">
                                     {this.state.unsettle_order}/₹
-                                    {this.state.unsettle}
+                                    {this.state.unsettle.toFixed(2)}
                                   </span>
                                 </h5>
                                 <h6>Unsettled Amount</h6>

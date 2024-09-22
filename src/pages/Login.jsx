@@ -2,14 +2,12 @@ import Timer from 'otp-timer';
 import { Component } from 'react';
 import { Helmet } from 'react-helmet';
 import OtpInput from 'react-otp-input';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams,Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api } from '../../config';
 import { AuthContext } from '../AuthContextProvider';
-import logo from '../assets/images/logos/main_logo_black.png';
+import logo from '../assets/images/logos/main_logo_black2.png';
 import welcome from '../assets/images/welcome.svg';
-import { saveUserData, getUserData, removeUserData } from '../indexedDB';
-import  secureLocalStorage  from  "react-secure-storage";
 class Login extends Component {
   static contextType = AuthContext;
   constructor(props) {
@@ -131,7 +129,7 @@ try{
               }
               else
               {
-                secureLocalStorage.setItem("object", json.data);
+                localStorage.setItem('@auth_login', JSON.stringify(data));
               }
   
             //redirect to dashboard
@@ -220,7 +218,7 @@ try{
                       alt="img"
                       style={{
                         maxWidth: '60%',
-                        margin: '0px auto 40px',
+                        margin: '0px auto 10px',
                       }}
                     />
                   </div>
@@ -323,7 +321,7 @@ try{
                             style={{ fontSize: '16px' }}
                           >
                             Welcome! <br />
-                           Thankyou for choosing
+                            Happy to serve you.
                             <br />
                             <small style={{ fontSize: '12px' }}>
                               Continue to WeazyDine Dashboard
@@ -372,6 +370,7 @@ try{
                             Continue
                           </button>
                         ) : (
+                          <>
                           <div
                             className="btn btn-sm btn-login"
                             onClick={() => {
@@ -380,6 +379,18 @@ try{
                           >
                             Send OTP
                           </div>
+                            {this.context.isElectron() && <Link to="/loginpassword">
+                            <br/> <p
+                              className="forgot-password"
+                              style={{ cursor: 'pointer',fontWeight:'500',textAlign:'center',color:'#0066b2' }}
+                            >
+                              Login with  Password instead
+                            </p>
+                            </Link>}
+                            
+                          </>
+                          
+
                         )}
                       </div>
                     </>

@@ -14,6 +14,7 @@ import {
 import { AuthContext } from '../AuthContextProvider';
 import logo_black from '../assets/images/logos/favicon.png';
 import logo_black_full from '../assets/images/logos/main_logo_black.png';
+import main_logo_black1 from '../assets/images/logos/main_logo_black1.png';
 import no_notifications from '../assets/images/no_notifications.webp';
 import billing from '../assets/images/tool_icons/billing.png';
 import marketing from '../assets/images/tool_icons/marketing.png';
@@ -86,7 +87,15 @@ export class Header extends Component {
       .then((json) => {
         toast.success('Logged out successfully');
         this.context.logout();
-        this.props.navigate('/login', { replace: true });
+        if(this.context.isElectron())
+        {
+          this.props.navigate('/loginpassword', { replace: true });
+        }
+        else
+        {
+          this.props.navigate('/login', { replace: true });
+        }
+       
       })
       .catch((error) => {
         console.error(error);
@@ -258,7 +267,7 @@ export class Header extends Component {
     const data = this.context.role.stores.map((item, index) => (
       
       {
-      label: item.shop_name == null ? 'N/A' : item.shop_name,
+      label: item.shop_name == null ? 'N/A' : item.shop_name + ' - ' + item.area,
       value: item.vendor_uu_id,
     }));
 
@@ -268,9 +277,18 @@ export class Header extends Component {
         <div className="header w-100">
           <div className="header-left border-0 w-3 d-flex justify-content-start">
             <div className="logo">
-            
-
+            {
+              this.context.is_enterprise == true?
               <Link to="/">
+                <img
+                  src={main_logo_black1 }
+                  alt="img"
+                  style={{
+                    width: '110px',
+                  }}
+                />
+              </Link>:
+             <Link to="/">
                 <img
                   src={logo_black_full}
                   alt="img"
@@ -279,6 +297,8 @@ export class Header extends Component {
                   }}
                 />
               </Link>
+              }
+             
             </div>
             &nbsp;
             {/* {

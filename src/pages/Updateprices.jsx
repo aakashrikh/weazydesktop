@@ -18,14 +18,15 @@ import Loader from '../othercomponent/Loader';
 import { Toggle } from '../othercomponent/Toggle';
 import Topnav from '../othercomponent/Topnav';
 import Editproduct from './Editproduct';
+import Swal from 'sweetalert2';
 
-export class Productlist extends Component {
+export class Updateprices extends Component {
   static contextType = AuthContext;
   constructor(props) {
     super(props);
     this.state = {
       category: [],
-      products: [],
+      data: [],
       active_cat: 0,
       is_loding: true,
       category_loding: true,
@@ -38,31 +39,24 @@ export class Productlist extends Component {
       editProductId: '',
       addons: [],
       select_product: [],
+      all_data: [],
     };
   }
 
   componentDidMount() {
-    this.fetchCategories();
+   
     this.fetchProducts(0, this.state.type, 1);
-    this.fetch_addon();
+   
   }
 
   closeModal = () => {
     this.setState({ open: false });
   };
 
-  active_cat = (id) => {
-    this.setState({
-      active_cat: id,
-      product_loding: true,
-      is_loding: true,
-      openCategoryModal: false,
-    });
-    this.fetchProducts(id, this.state.type, 1);
-  };
+ 
 
   fetchProducts = (category_id, type, page) => {
-    fetch(api + 'vendor_get_vendor_product', {
+    fetch(api + 'vendor_get_vendor_product_prices', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -80,27 +74,13 @@ export class Productlist extends Component {
       .then((json) => {
         if (!json.status) {
           var msg = json.msg;
-          if (page == 1) {
-            this.setState({ products: [] });
-          }
+ 
+            this.setState({ data: [] });
+
         } else {
-          this.setState({
-            next_page: json.data.next_page_url,
-          });
-          if (page == 1) {
-            this.setState({ products: json.data.data });
-          } else {
-            {
-              this.state.next_page
-                ? this.setState({
-                    products: [...this.state.products, ...json.data.data],
-                    page: this.state.page + 1,
-                  })
-                : this.setState({
-                    products: json.data.data,
-                  });
-            }
-          }
+         
+            this.setState({ data: json.data, all_data: json.data });
+          
         }
         return json;
       })
@@ -112,33 +92,24 @@ export class Productlist extends Component {
       });
   };
 
-  fetchCategories = () => {
-    fetch(api + 'fetch_vendor_category', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: this.context.token,
-      },
-    })
-      .then((response) => response.json())
-      .then((json) => {
-        if (json.status) {
-          this.setState({ category: json.data });
-        } else {
-          this.setState({ category: [] });
-        }
+  
 
-        return json;
-      })
-      .catch((error) => console.error(error))
-      .finally(() => {
-        this.setState({ category_loding: false });
-      });
+  handlePriceChange = (index, priceType, value) => {
+//alert(index,priceType,value)
+
+      const data = this.state.data;
+
+      data[index][priceType] = value;
+      this.setState({ data: data });
   };
 
-  delete_product = (id, key) => {
-    fetch(api + 'update_status_product_offer', {
+ 
+
+  handleSaveChanges = () => {
+    this.setState({
+      button_load: true
+    });
+    fetch(api + 'update_product_prices', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -146,104 +117,101 @@ export class Productlist extends Component {
         Authorization: this.context.token,
       },
       body: JSON.stringify({
-        action_id: id,
-        type: 'product',
-        status: 'delete',
+        data: this.state.data,
       }),
     })
       .then((response) => response.json())
       .then((json) => {
         if (!json.status) {
           var msg = json.msg;
-          toast.success(msg);
+ 
+          toast.error(msg);
+            // this.setState({ data: [] });
+
         } else {
-          toast.success('Product Deleted Successfully');
-          this.setState({ openEditDrawer: false });
-
-          var products = this.state.products;
-          products.splice(key, 1);
-
-          this.setState({ products: products });
-
-          //this.fetchProducts(this.state.active_cat, this.state.type, 1);
+         
+          toast.success(json.msg);
+            // this.setState({ data: json.data });
+          
         }
+        return json;
       })
       .catch((error) => {
         console.error(error);
       })
       .finally(() => {
-        this.setState({ isloading: false });
+        this.setState({ button_load: false });
       });
   };
 
+
+  renderTable() {
+    const { data} = this.state;
+
+    return (
+      <table className="table  datanew" >
+        <thead>
+          <tr>
+          <th >S.no</th>
+            <th >Product Name</th>
+            <th >Variant Name</th>
+            {/* Add headers for each price type dynamically */}
+            {data.length > 0 && Object.keys(data[0]).filter(key => key !== 'product_name' && key !== 'variant_name' && key !== 'product_id' && key !== 'variant_id').map(pricePoint => (
+              <th key={pricePoint} >{pricePoint}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+        {data.map((product, index) => (
+  <tr key={product.id}>
+    <td >{index + 1}</td>
+    <td >{product.product_name}</td>
+    <td >{product.variant_name}</td> {/* Assuming this is a column */}
+    {/* Render input fields for each price type dynamically */}
+    {Object.keys(product).filter(key => key !== 'product_name' && key !== 'variant_name' && key !== 'product_id' && key !== 'variant_id').map(priceType => (
+      <td key={priceType} >
+        <input
+          type="number"
+          className='form-control'
+          value={product[priceType] } // Default to 0 if the price is undefined
+          onChange={e => this.handlePriceChange(index, priceType, e.target.value)} // No variant ID needed
+          style={{ width: '100%' }}
+        />
+      </td>
+    ))}
+  </tr>
+))}
+        </tbody>
+      </table>
+    );
+  }
+
+
   search = (e) => {
-    if (e.target.value.length > 1) {
-      this.setState({ products: [], is_loding: true });
-      fetch(api + 'search_product', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: this.context.token,
-        },
-        body: JSON.stringify({
-          search_query: e.target.value,
-          status: 'all',
-        }),
-      })
-        .then((response) => response.json())
-        .then((json) => {
-          if (!json.status) {
-            var msg = json.msg;
-            toast.success(msg);
-            this.setState({ products: [] });
-          } else {
-            this.setState({ products: json.data });
-          }
-          this.setState({ is_loding: false });
-          return json;
-        })
-        .catch((error) => {
-          console.error(error);
-        })
-        .finally(() => {});
+  
+    if (e.target.value.length >= 1) {
+      var search = e.target.value;
+      var products = this.state.all_data;
+
+      var filteredProducts = products.filter((product) => {
+        const nameMatches = product.product_name
+          .toLowerCase()
+          .includes(search.toLowerCase());
+        const shortCodeMatches = product.product_code
+          ? product.product_code.toLowerCase().includes(search.toLowerCase())
+          : false;
+        return nameMatches || shortCodeMatches;
+      });
+      this.setState({
+        data: filteredProducts,
+      });
     } else {
-      this.fetchProducts(this.state.active_cat, this.state.type, 1);
+      this.setState({
+        data: this.state.all_data,
+      });
     }
   };
 
-  fetch_addon = () => {
-    fetch(api + 'fetch_product_addon', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: this.context.token,
-      },
-      body: JSON.stringify({}),
-    })
-      .then((response) => response.json())
-      .then((json) => {
-        this.setState({ addon: json.data });
-        const addon_object = json.data.map((item) => ({
-          label: item.group_name,
-          value: item.id,
-        }));
-        this.setState({ addons: addon_object });
-
-        this.setState({ is_loading: false });
-        return json;
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  };
-
-  update_product = (index, product) => {
-    var products = this.state.products;
-    products[index] = product;
-    this.setState({ products: products });
-  };
 
   render() {
     return (
@@ -257,35 +225,60 @@ export class Productlist extends Component {
             <div className="content">
               <div className="page-header">
                 <div className="page-title">
-                  <h4>Product List</h4>
+                  <h4>Product Prices</h4>
                 </div>
                 {this.context.role.staff_role != 'staff' && (
                   <>
                     <div className="page-btn d-flex align-items-center">
-                      <button
+                      {
+                        this.state.button_load?
+                        <button className="btn btn-added me-2" disabled>
+                          <span
+                            className="spinner-border spinner-border-sm"
+                            role="status"
+                            aria-hidden="true"
+                          ></span>
+                          Saving...
+                        </button>
+                        :
+                        
+                     <button
                         className="btn btn-added me-2"
                         onClick={() => {
-                          this.setState({ open: true });
+                          Swal.fire({
+                            title: 'Are you sure?',
+                            text: 'You want to update prices of all products',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Yes, update it!',
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              this.handleSaveChanges();
+                            }
+                          });
+                          
                         }}
                       >
-                        Bulk Upload Product
+                    Update Product
                       </button>
-
-                      <Link to="/updateprices" className="btn btn-added">
-                        Update Online Prices
+ }
+                      
+                      <Link to="/productlist" className="btn btn-added">
+                        Back
                       </Link>  
 
-&nbsp;&nbsp;
-                      <Link to="/addproduct" className="btn btn-added">
+                      {/* <Link to="/addproduct" className="btn btn-added">
                         Add New Product
-                      </Link>
+                      </Link> */}
                     </div>
                   </>
                 )}
               </div>
-              {this.context.role.staff_role != 'staff' && (
+              {/* {this.context.role.staff_role != 'staff' && (
                 <Topnav array="catalogue" />
-              )}
+              )} */}
               {/* <Topnav array="catalogue" /> */}
               <div className="comp-sec-wrapper mt-20">
                 <section className="comp-section">
@@ -302,7 +295,7 @@ export class Productlist extends Component {
                     </div>
                     <div className="col-md-3">
                       <ul className="nav nav-tabs nav-tabs-solid nav-tabs-rounded nav-justified">
-                        <li className="nav-item">
+                        {/* <li className="nav-item">
                           <a
                             className="nav-link active pb-2 pt-2"
                             href="#solid-rounded-justified-tab1"
@@ -341,7 +334,7 @@ export class Productlist extends Component {
                           >
                             Combos
                           </a>
-                        </li>
+                        </li> */}
                       </ul>
                     </div>
                   </div>
@@ -351,14 +344,14 @@ export class Productlist extends Component {
                 <Loader />
               ) : (
                 <>
-                  {this.state.products.length > 0 ? (
+                  {this.state.data.length > 0 ? (
                     <>
                       <div className="card">
                         <div className="card-body">
                           <div className="table-responsive">
                             <InfiniteScroll
                               hasChildren={true}
-                              dataLength={this.state.products.length}
+                              dataLength={this.state.data.length}
                               next={() => {
                                 this.fetchProducts(
                                   this.state.active_cat,
@@ -372,7 +365,7 @@ export class Productlist extends Component {
                               }}
                               hasMore={
                                 this.state.next_page !== null &&
-                                this.state.products.length > 0
+                                this.state.data.length > 0
                               }
                               loader={
                                 <div className="d-flex align-items-center justify-content-center w-full mt-xl">
@@ -380,7 +373,9 @@ export class Productlist extends Component {
                                 </div>
                               }
                             >
-                              <table className="table  datanew">
+
+{this.renderTable()}
+                              {/* <table className="table  datanew">
                                 <thead>
                                   <tr>
                                     <th>S.no</th>
@@ -467,7 +462,7 @@ export class Productlist extends Component {
                                     );
                                   })}
                                 </tbody>
-                              </table>
+                              </table> */}
                             </InfiniteScroll>
                           </div>
                         </div>
@@ -592,4 +587,4 @@ export class Productlist extends Component {
   }
 }
 
-export default Productlist;
+export default Updateprices;

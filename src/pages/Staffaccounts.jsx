@@ -21,7 +21,7 @@ export class Staffaccounts extends Component {
       openedit: false,
       is_loding: true,
       add_data: [],
-
+type:'all',
       edit: false,
       newaddonLoading: false,
       editaddonLoading: false,
@@ -30,9 +30,16 @@ export class Staffaccounts extends Component {
       staff_name: '',
       staff_role: '',
 
+      staff_password: '',
+
+      staff_billing: '',
+
       staff_id: '',
       staff_edit_role: '',
       staff_edit_name: '',
+      staff_edit_password: '',
+      staff_edit_billing: '',
+      
     };
   }
 
@@ -40,7 +47,7 @@ export class Staffaccounts extends Component {
     window.setTimeout(() => {
       window.scrollTo(0, 0);
     }, 0);
-    this.fetch_staff();
+    this.fetch_staff('all');
   }
 
   add_staff = () => {
@@ -54,6 +61,13 @@ export class Staffaccounts extends Component {
 
     if (!number.test(staff_contact)) {
       toast.error('Please enter valid contact');
+      return;
+    }
+
+    //password validation
+
+    if (this.state.staff_password.length < 6 ) {
+      toast.error('Password must be at least 6 characters long');
       return;
     }
 
@@ -73,6 +87,8 @@ export class Staffaccounts extends Component {
           staff_contact: staff_contact,
           staff_name: staff_name,
           staff_role: staff_role,
+          staff_password: this.state.staff_password,
+          is_billing_enabled: this.state.staff_billing,
         }),
       })
         .then((res) => res.json())
@@ -118,6 +134,8 @@ export class Staffaccounts extends Component {
           staff_id: staff_id,
           staff_name: staff_edit_name,
           staff_role: staff_edit_role,
+          staff_password: this.state.staff_edit_password,
+          is_billing_enabled: this.state.staff_edit_billing,
         }),
       })
         .then((res) => res.json())
@@ -168,7 +186,8 @@ export class Staffaccounts extends Component {
       });
   };
 
-  fetch_staff = () => {
+  fetch_staff = (type) => {
+    this.setState({ is_loding: true });
     fetch(api + 'fetch_staff', {
       method: 'POST',
       headers: {
@@ -176,7 +195,7 @@ export class Staffaccounts extends Component {
         Authorization: this.context.token,
       },
       body: JSON.stringify({
-        staff_type:'all'
+        staff_type:type
       }),
     })
       .then((res) => res.json())
@@ -232,6 +251,99 @@ export class Staffaccounts extends Component {
               </div>
 
               <Topnav array="setup" />
+              <div className="comp-sec-wrapper">
+              <section className="comp-section">
+              <ul className="nav nav-tabs nav-tabs-solid nav-tabs-rounded nav-justified">
+                  <li className="nav-item">
+                          <a
+                            className={
+                              'nav-link' +
+                              (this.state.type == 'all' ? ' active' : '')
+                            }
+                            href="#solid-rounded-justified-tab1"
+                            data-bs-toggle="tab"
+                            onClick={() => {
+                          
+                              this.fetch_order(1, '');
+                            }}
+                          >
+                            All
+                          </a>
+                        </li>
+
+                        
+                        <li className="nav-item">
+                          <a
+                            className={
+                              'nav-link' +
+                              (this.state.type == 'admin' ? ' active' : '')
+                            }
+                            href="#solid-rounded-justified-tab1"
+                            data-bs-toggle="tab"
+                            onClick={() => {
+                      
+                              this.fetch_staff('admin')
+                            }}
+                          >
+                            Admin
+                          </a>
+                        </li>
+
+                        <li className="nav-item">
+                          <a
+                            className={
+                              'nav-link' +
+                              (this.state.type == 'manager' ? ' active' : '')
+                            }
+                            href="#solid-rounded-justified-tab1"
+                            data-bs-toggle="tab"
+                            onClick={() => {
+                           
+                              this.fetch_staff('manager')
+                            }}
+                          >
+                            Manager
+                          </a>
+                        </li>
+
+                        <li className="nav-item">
+                          <a
+                            className={
+                              'nav-link' +
+                              (this.state.type == 'staff' ? ' active' : '')
+                            }
+                            href="#solid-rounded-justified-tab1"
+                            data-bs-toggle="tab"
+                            onClick={() => {
+                            
+                              this.fetch_staff('staff')
+                            }}
+                          >
+                           Staff
+                          </a>
+                        </li>
+
+                        <li className="nav-item">
+                          <a
+                            className={
+                              'nav-link' +
+                              (this.state.type == 'delivery_partner' ? ' active' : '')
+                            }
+                            href="#solid-rounded-justified-tab1"
+                            data-bs-toggle="tab"
+                            onClick={() => {
+                            
+                              this.fetch_staff('delivery_partner')
+                            }}
+                          >
+                           Delivery Partner
+                          </a>
+                        </li>
+
+                        </ul>
+                        </section>
+                        <br/>
+                        </div>
 
               {this.state.is_loding ? (
                 <Loader />
@@ -247,6 +359,7 @@ export class Staffaccounts extends Component {
                               <th>Name</th>
                               <th>Phone Number</th>
                               <th>Role</th>
+                              <th>Billing Enabled</th>
                               <th>Action</th>
                             </tr>
                           </thead>
@@ -264,6 +377,14 @@ export class Staffaccounts extends Component {
                                   {item.staff_role}
                                 </td>
                                 <td>
+                                  {/* {
+                                    item.is_billing_enabled
+                                  } */}
+                                  {
+                                    (item.is_billing_enabled == 1) ?"Yes":"No"
+                                  }
+                                </td>
+                                <td>
                                   {item.staff_role !== 'owner' ? (
                                     <>
                                       <a>
@@ -272,11 +393,14 @@ export class Staffaccounts extends Component {
                                           src={edit_icon}
                                           alt="img"
                                           onClick={() => {
+                                
                                             this.setState({
                                               staff_edit_name: item.staff_name,
                                               staff_edit_role: item.staff_role,
                                               edit: true,
                                               staff_id: item.staff_id,
+                                              staff_edit_password: '',
+                                              staff_edit_billing: item.is_billing_enabled,
                                             });
                                           }}
                                         />
@@ -403,6 +527,46 @@ export class Staffaccounts extends Component {
                     <option value="delivery_partner">Delivery Partner</option>
                   </select>
                 </div>
+
+
+                <div className="form-group">
+                  <label>
+                     Is Billing Enabled
+                    <span className="text-danger">*</span>
+                  </label>
+
+                  <select
+                    onChange={(e) => {
+                      this.setState({
+                        staff_billing: e.target.value,
+                      });
+                    }}
+                    className="form-control"
+             
+                  >
+                
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                  </select>
+                </div>
+
+
+                <div className="form-group">
+                  <label>
+                    Password (When you want to change)
+                    <span className="text-danger"></span>
+                  </label>
+
+                  <input
+                    type="password"
+                    onChange={(e) => {
+                      this.setState({
+                        staff_password: e.target.value,
+                      });
+                    }}
+                  />
+                </div>
+
               </div>
               <div className="col-lg-12 d-flex justify-content-end">
                 {this.state.newaddonLoading ? (
@@ -504,6 +668,47 @@ export class Staffaccounts extends Component {
                     <option value="delivery_partner">Delivery Partner</option>
                   </select>
                 </div>
+                
+
+                <div className="form-group">
+                  <label>
+                     Is Billing Enabled 
+                    <span className="text-danger">*</span>
+                  </label>
+
+                  <select
+                    onChange={(e) => {
+                      this.setState({
+                        staff_edit_billing: e.target.value,
+                      });
+                    }}
+                    className="form-control"
+                    value={this.state.staff_edit_billing}
+                  >
+                
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                  </select>
+                </div>
+
+
+                <div className="form-group">
+                  <label>
+                    Password (When you want to change)
+                    <span className="text-danger"></span>
+                  </label>
+
+                  <input
+                    type="password"
+                    onChange={(e) => {
+                      this.setState({
+                        staff_edit_password: e.target.value,
+                      });
+                    }}
+                  />
+                </div>
+                
+
               </div>
               <div className="col-lg-12 d-flex justify-content-end">
                 {this.state.newaddonLoading ? (
@@ -524,7 +729,23 @@ export class Staffaccounts extends Component {
                   <a
                     href="javascript:void(0);"
                     onClick={() => {
-                      this.edit_staff();
+                      Swal.fire({
+                        title: 'Are you sure?',
+                        text: "You won't be able to revert this!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Yes, update it!',
+                      })
+                        .then((result) => {
+                          if (result.isConfirmed) {
+                            this.edit_staff();
+                          }
+                        })
+                        .catch((error) => {
+                          console.log(error);
+                        });
                     }}
                     className="btn btn-secondary btn-sm me-2"
                   >

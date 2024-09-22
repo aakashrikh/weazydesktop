@@ -7,7 +7,7 @@ import no_order from '../assets/images/no_orders.webp';
 import Header from '../othercomponent/Header';
 import Loader from '../othercomponent/Loader';
 import OrdersTable from '../othercomponent/OrdersTable';
-
+import { CheckPicker } from 'rsuite';
 class Orderlist extends Component {
   static contextType = AuthContext;
   constructor(props) {
@@ -20,6 +20,10 @@ class Orderlist extends Component {
       next_page: '',
       status: '',
       search: '',
+      type: 'all',
+      channel: 'all',
+      store:[],
+      bill:''
     };
   }
 
@@ -41,6 +45,7 @@ class Orderlist extends Component {
   }
 
   fetch_order = (page_id, status) => {
+   
     fetch(api + 'get_orders_vendor', {
       method: 'POST',
       headers: {
@@ -51,6 +56,10 @@ class Orderlist extends Component {
       body: JSON.stringify({
         page: page_id,
         status: status,
+        channel: this.state.channel,
+        store:this.state.store,
+        type: this.state.type,
+        bill:this.state.bill
       }),
     })
       .then((response) => response.json())
@@ -141,7 +150,37 @@ class Orderlist extends Component {
   };
   
 
+  onSelect = (selectedList) => {
+    {
+      this.props.store_d !== undefined
+        ? this.setState({ store: [] })
+        : null;
+    }
+    const store = [];
+    selectedList.map((item, index) => {
+      store.push(item);
+    });
+    this.setState({ store: store });
+  };
+
+  onRemove = (selectedList) => {
+    // remove from selectedList.
+    const store = [];
+    selectedList.map((item, index) => {
+      store.push(item);
+    });
+    this.setState({ store: store });
+  };
+
+  
   render() {
+    const data = this.context.role.stores.map((item, index) => (
+      
+      {
+      label: item.shop_name == null ? 'N/A' : item.shop_name + '-' + item.area,
+      value: item.vendor_uu_id,
+    }));
+
     return (
       <>
         <Helmet>
@@ -157,23 +196,163 @@ class Orderlist extends Component {
                 </div>
                 <div className="page-btn w-25">
                   <div className="form-group m-0">
-                    <input
+                    {/* <input
                       type="text"
                       className="form-control"
                       placeholder="Search using order id"
                       onChange={(e) => {
                         this.search_order(e);
                       }}
-                    />
+                    /> */}
                   </div>
                 </div>
               </div>
+
+              
               <div className="comp-sec-wrapper">
                 <section className="comp-section">
                   <div className="row pb-4">
                     <div className="col-md-12">
+
+                    <div className="col-md-12 d-flex align-items-center justify-content-between w-100">
                       <ul className="nav nav-tabs nav-tabs-solid nav-tabs-rounded nav-justified">
+                      
+                      <li className="nav-item">
+                          <label>Bill No if Any</label>
+                              <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Search using order id"
+                          onChange={(e) => {
+                           this.setState({
+                             bill: e.target.value,
+                           })
+                          }}
+                        />
+                    
+                        </li>
+
+                        <li className="nav-item" style={{ marginLeft: '10px' }}>
+                       <label>Select type</label>
+                      <select
+                            className="form-control"
+                            onChange={(e) => {
+                              this.setState({
+                                type: e.target.value,
+                              });
+                            }}
+                            style={{ width: '150px', marginRight: '10px' }}
+                            // className="select-container"
+                          >
+                            <option value={'all'}>All</option>
+                            <option value={'TakeAway'}>TakeAway</option>
+                            <option value={'Delivery'}>Delivery</option>
+                            <option value={'DineIn'}>Dine-In</option>
+                          </select>
+                        </li>
+
+                        
+
+
                         <li className="nav-item">
+                          <label>Channel</label>
+                          <select
+                            className="form-control"
+                            onChange={(e) => {
+                              this.setState({
+                                channel: e.target.value,
+                              });
+                            }}
+                            style={{ width: '150px', marginRight: '10px' }}
+                            // className="select-container"
+                          >
+                            <option value={'all'}>All</option>
+                            <option value={'pos'}>POS</option>
+                            <option value={'website'}>QR Scan</option>
+                            <option value={'online'}>Online</option>
+                          </select>
+                        </li>
+
+
+                        <li className="nav-item">
+                          <label>Order Status</label>
+                          <select
+                            className="form-control"
+                            onChange={(e) => {
+                              this.setState({
+                                status: e.target.value,
+                              });
+                            }}
+                            style={{ width: '150px', marginRight: '10px' }}
+                            // className="select-container"
+                          >
+                            <option value={''}>All</option>
+                            <option value={'confirmed'}>Confirmed</option>
+                            <option value={'in_process'}>Preparing</option>
+                            <option value={'processed'}>Ready</option>
+                            <option value={'picked_up'}>Picked Up</option>
+                            <option value={'completed'}>Delivered</option>
+                            <option value={'cancelled'}>Cancelled</option>
+                            <option value={'unsettled'}>Unsettled</option>
+                            <option value={'future'}>Future</option>
+                          </select>
+                        </li>
+                   
+                        <li>
+                        {
+                this.context.role.stores.length>1 && 
+            <li className="nav-item">
+                      
+                         <label>Outlets</label>
+                         <br/>
+                          <CheckPicker
+                            data={data}
+                            style={{ width: '250px' }}
+                            className="form-control border-none py-0 ps-0"
+                            onChange={(e) => {
+                              this.onSelect(e);
+                            }}
+                            onClean={() => {
+                              this.onRemove('');
+                            }}
+                            defaultValue={this.state.category}
+                            
+                          />
+                        </li>
+
+          }
+                        </li>
+                        <li
+                          className="nav-item"
+                          style={{
+                            paddingTop: '20px',
+                          }}
+                        >
+                          <button
+                            className="btn btn-secondary"
+                            href="#solid-rounded-justified-tab1"
+                            data-bs-toggle="tab"
+                            onClick={() => {
+                              this.setState({ is_loading: true });
+                              this.fetch_order(1, this.state.status);
+                            }}
+                          >
+                            Search
+                          </button>
+                        </li>
+                      </ul>
+                      
+                    </div>
+
+<br/>
+                      <ul className="nav nav-tabs nav-tabs-solid nav-tabs-rounded nav-justified">
+
+                        
+                        <li className="nav-item">
+
+                      
+
+
                           <a
                             className={
                               'nav-link' +

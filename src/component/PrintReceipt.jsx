@@ -46,22 +46,28 @@ export class PrintReceipt extends Component {
                 fontFamily: 'Roboto, sans-serif',
               }}
             >
-              {this.props.order.vendor.address !== null ? (
+              {this.props.order.vendor.area !== null ? (
+                <span style={{fontWeight: '500',fontSize: '1.2em',fontFamily: 'Roboto, sans-serif'}}>{this.props.order.vendor.area}</span>
+              ) : null}
+              <br/>
+               {this.props.order.vendor.address !== null ? (
                 <span style={{fontWeight: '500',fontSize: '1.2em',fontFamily: 'Roboto, sans-serif'}}>{this.props.order.vendor.address}</span>
               ) : null}
-            </p>
-            {this.props.order.vendor.business_contact !== null ? (
-              <p
-                style={{
-                  marginBottom: '10px',
-                  lineHeight: '20px',
-                  fontFamily: 'Roboto, Sans-serif' }}
-              >
-                <span>
+
+              <br/>
+
+              {this.props.order.vendor.business_contact !== null ? (
+             
+                <span style={{fontWeight: '500',fontSize: '1.2em',fontFamily: 'Roboto, sans-serif'}}>
                   Contact - {this.props.order.vendor.business_contact}
                 </span>
-              </p>
+         
             ) : null}
+
+            </p>
+           
+
+           
 
             {this.props.order.vendor.gstin !== null ? (
               <p>
@@ -605,7 +611,7 @@ export class PrintReceipt extends Component {
               borderBottom: '1px solid #000',
             }}
           >
-            <p className="legal" style={{fontWeight:'500',fontFamily: 'Roboto, Sans-serif'}}>Thank's Visit Again!</p>
+            <p className="legal" style={{fontWeight:'500',fontFamily: 'Roboto, Sans-serif'}}>Thank you! Please visit again.</p>
           </div>
           <div
             id="legalcopy"

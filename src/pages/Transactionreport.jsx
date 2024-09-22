@@ -4,7 +4,7 @@ import { CSVLink } from 'react-csv';
 import { Helmet } from 'react-helmet';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { useParams } from 'react-router-dom';
-import { DateRangePicker } from 'rsuite';
+import { DateRangePicker,CheckPicker  } from 'rsuite';
 import { api } from '../../config';
 import { AuthContext } from '../AuthContextProvider';
 import no_order from '../assets/images/no-transaction.webp';
@@ -27,10 +27,7 @@ class Transactionreport extends Component {
     range: this.props.range,
     last_page: 1,
     total: 0,
-    upi: 0,
-    card:0,
-    cash: 0,
-    weazypay: 0,
+   payment_methods: [],
     method: this.props.property,
     itemsPerPage: 50,
     downloaded_data: [],
@@ -40,6 +37,8 @@ class Transactionreport extends Component {
     staff_sale: [],
     open: false,
     drawerOrderId: '',
+    download_csv: false,
+    store:[],
   };
 
   setDate = (e) => {
@@ -52,7 +51,7 @@ class Transactionreport extends Component {
     }, 0);
     this.fetch_order(1, this.state.range, this.state.method);
     this.fetch_staff();
-    this.fetch_csv();
+
   }
 
   fetch_staff = () => {
@@ -92,6 +91,7 @@ class Transactionreport extends Component {
         method: method,
         page_length: this.state.itemsPerPage,
         staff_id: this.state.staff_id,
+        store:this.state.store
       }),
     })
       .then((response) => response.json())
@@ -101,23 +101,23 @@ class Transactionreport extends Component {
             this.setState({
               data: [],
               total: 0,
-              upi: 0,
-              card:0,
-              cash: 0,
-              weazypay: 0,
+              payment_methods: [],
+              staff_sale: []
             });
           }
         } else {
           if (json.staff != undefined) {
+        
             this.setState({ staff_sale: json.staff });
+          }
+          else
+          {
+            this.setState({ staff_sale: [] });
           }
           this.setState({
             next_page: json.data.next_page_url,
             total: json.total_earnning,
-            upi: json.upi,
-            card:json.card,
-            cash: json.cashsale,
-            weazypay: json.weazypay,
+            payment_methods:json.method
           });
 
           if (page_id == 1) {
@@ -145,42 +145,72 @@ class Transactionreport extends Component {
       });
   };
 
-  fetch_csv = () => {
-    this.setState({ loading: true });
-    fetch(api + 'fetch_sales_reports', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: this.context.token,
-      },
-      body: JSON.stringify({
-        page: 1,
-        range: 'custom',
-        start_date: this.state.from,
-        end_date: this.state.to,
-        method: this.state.method,
-        page_length: 'all',
-      }),
-    })
-      .then((response) => response.json())
-      .then((json) => {
-        if (json.status) {
-          this.setState({ downloaded_data: json.data });
-        } else {
-          this.setState({ downloaded_data: [] });
-        }
-        return json;
-      })
-      .catch((error) => {
-        console.error(error);
-      })
-      .finally(() => {
-        this.setState({ loading: false });
-      });
+  onSelect = (selectedList) => {
+    {
+      this.props.store_d !== undefined
+        ? this.setState({ store: [] })
+        : null;
+    }
+    const store = [];
+    selectedList.map((item, index) => {
+      store.push(item);
+    });
+    this.setState({ store: store });
   };
 
+  onRemove = (selectedList) => {
+    // remove from selectedList.
+    const store = [];
+    selectedList.map((item, index) => {
+      store.push(item);
+    });
+    this.setState({ store: store });
+  };
+
+
+  fetch_csv = () => {
+    this.setState({ download_csv: true });
+   fetch(api + 'fetch_sales_reports', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: this.context.token,
+    },
+    body: JSON.stringify({
+      page: 1,
+      range: 'custom',
+      start_date: this.state.from,
+      end_date: this.state.to,
+      method: this.state.method,
+      page_length: 'all',
+      staff_id: this.state.staff_id,
+      store:this.state.store
+    }),
+  })
+   .then((respose) => respose.blob())
+   .then((blob) => {
+     const url = window.URL.createObjectURL(new Blob([blob]));
+     const link = document.createElement('a');
+     link.href = url;
+     link.setAttribute('download', 'products_report.csv');
+     document.body.appendChild(link);
+     link.click();
+     this.setState({download_csv: false});
+   });
+ };
+
+
+
   render() {
+    const data = this.context.role.stores.map((item, index) => (
+      
+      {
+      label: item.shop_name == null ? 'N/A' : item.shop_name + '-' + item.area,
+      value: item.vendor_uu_id,
+    }));
+
+
     return (
       <>
         <Helmet>
@@ -305,6 +335,7 @@ class Transactionreport extends Component {
                             <option value="PhonePe">PhonePe</option>
                             <option value="Amazon Pay">Amazon Pay</option>
                             <option value="Gpay">Gpay</option>
+                            <option value="'BharatPe">BharatPe</option>
                             <option value="MagicPin">MagicPin</option>
                             <option value="DotPe">DotPe</option>
                             <option value="Dunzo">Dunzo</option>
@@ -338,6 +369,30 @@ class Transactionreport extends Component {
                           </li>
                         )}
 
+{/* <li>
+                        {
+                this.context.role.stores.length>1 && 
+            <li className="nav-item">
+                              <label>Select Outlet</label>
+                              <br/>
+                          <CheckPicker
+                            data={data}
+                            style={{ width: '250px' }}
+                            className="form-control border-none py-0 ps-0"
+                            onChange={(e) => {
+                              this.onSelect(e);
+                            }}
+                            onClean={() => {
+                              this.onRemove('');
+                            }}
+                            defaultValue={this.state.category}
+                            
+                          />
+                        </li>
+
+          }
+                        </li> */}
+
                         <li className="nav-item" style={{ paddingTop: 20 }}>
                           <button
                             className="btn btn-secondary"
@@ -350,29 +405,44 @@ class Transactionreport extends Component {
                                 this.state.range,
                                 this.state.method
                               );
-                              this.fetch_csv();
+                            
                             }}
                           >
                             Search
                           </button>
                         </li>
                       </ul>
-                      <CSVLink
-                        data={this.state.downloaded_data}
-                        filename={'Transactions Report.csv'}
-                        className="btn btn-secondary"
-                        style={{ marginTop: '20px' }}
-                        target="_blank"
+                      {
+                        !this.state.download_csv ? <button
+                          className="btn btn-secondary"
+                          onClick={() => {
+                            this.fetch_csv();
+                          }}
+                        >
+                          {this.state.loading ? 'Loading csv...' : 'Download CSV'}
+                        </button> : //show loading button
+                        <button
+                        className="btn btn-secondary btn-sm w-120"
+                        disabled
                       >
-                        {this.state.loading ? 'Loading csv...' : 'Download CSV'}
-                      </CSVLink>
+                        <i
+                          className="fa-regular fa-circle-down"
+                          style={{
+                            fontSize: 18,
+                            marginRight: 10,
+                          }}
+                        ></i>
+                        Downloading
+                      </button>
+                      }
+                     
                     </div>
                   </div>
                 </section>
               </div>
               {!this.state.is_loading ? (
                 <>
-                  {this.state.method == 'all' ? (
+                
                     <div className="dashboard-status-card">
                       <div className="row w-100">
                         <div className="col-lg-3 col-sm-3 col-12">
@@ -386,116 +456,49 @@ class Transactionreport extends Component {
                               <h5>
                                 ₹
                                 <span className="counters">
-                                  {this.state.total.toFixed(2)}
+                                  {this.state.total}
                                 </span>
                               </h5>
                               <h6>Total</h6>
                             </div>
                           </div>
                         </div>
-                        <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash2">
-                            <div className="dash-widgetimg">
-                              <span>
-                                <i className="iconly-Wallet icli sidebar_icons"></i>
-                              </span>
+                        {
+                          this.state.payment_methods.length > 0 &&
+                          this.state.payment_methods.map((item, index) => {
+                            return (
+                              <div className="col-lg-3 col-sm-3 col-12">
+                              <div className="dash-widget dash2">
+                                <div className="dash-widgetimg">
+                                  <span>
+                                    <i className="iconly-Wallet icli sidebar_icons"></i>
+                                  </span>
+                                </div>
+                                <div className="dash-widgetcontent">
+                                  <h5>
+                                    ₹
+                                    <span className="counters">
+                                      {item.total}
+                                    </span>
+                                  </h5>
+                                  <h6>{item.txn_method	} </h6>
+                                </div>
+                              </div>
                             </div>
-                            <div className="dash-widgetcontent">
-                              <h5>
-                                ₹
-                                <span className="counters">
-                                  {this.state.cash.toFixed(2)}
-                                </span>
-                              </h5>
-                              <h6>Cash </h6>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash1">
-                            <div className="dash-widgetimg">
-                              <span>
-                                <i className="iconly-Wallet icli sidebar_icons"></i>
-                              </span>
-                            </div>
-                            <div className="dash-widgetcontent">
-                              <h5>
-                                ₹
-                                <span className="counters">
-                                  {this.state.upi.toFixed(2)}
-                                </span>
-                              </h5>
-                              <h6>UPI</h6>
-                            </div>
-                          </div>
-                        </div>
-                     
-                        <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash2">
-                            <div className="dash-widgetimg">
-                              <span>
-                                <i className="iconly-Wallet icli sidebar_icons"></i>
-                              </span>
-                            </div>
-                            <div className="dash-widgetcontent">
-                              <h5>
-                                ₹
-                                <span className="counters">
-                                  {this.state.card.toFixed(2)}
-                                </span>
-                              </h5>
-                              <h6>Card </h6>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash3">
-                            <div className="dash-widgetimg">
-                              <span>
-                                <i className="iconly-Wallet icli sidebar_icons"></i>
-                              </span>
-                            </div>
-                            <div className="dash-widgetcontent">
-                              <h5>
-                                ₹
-                                <span className="counters">
-                                  {this.state.weazypay.toFixed(2)}
-                                </span>
-                              </h5>
-                              <h6>Weazy Pay</h6>
-                            </div>
-                          </div>
-                        </div>
+                            )
+                          })
+                          
+                        }
+                       
+                      
                       </div>
                     </div>
-                  ) : (
-                    <div className="dashboard-status-card">
-                      <div className="row w-100">
-                        <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash1">
-                            <div className="dash-widgetimg">
-                              <span>
-                                <i className="iconly-Wallet icli sidebar_icons"></i>
-                              </span>
-                            </div>
-                            <div className="dash-widgetcontent">
-                              <h5>
-                                ₹
-                                <span className="counters">
-                                  {this.state.total.toFixed(2)}
-                                </span>
-                              </h5>
-                              <h6>Total</h6>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                 
 
-                  {this.state.staff_sale.length > 1 &&
-                  this.state.method == 'all' ? (
+
+
+{this.state.staff_sale.length > 1 &&
+                  
                     this.state.staff_sale.map((item, index) => {
                       return (
                         <div className="dashboard-status-card">
@@ -520,7 +523,7 @@ class Transactionreport extends Component {
                                   <h5>
                                     ₹
                                     <span className="counters">
-                                      {item.total_earnning.toFixed(2)}
+                                      {item.total}
                                     </span>
                                   </h5>
                                   <h6>Total</h6>
@@ -528,7 +531,10 @@ class Transactionreport extends Component {
                               </div>
                             </div>
 
-                            <div className="col-lg-3 col-sm-3 col-12">
+                        {
+                          item.method.map((item, index) => {
+                            return (
+                              <div className="col-lg-3 col-sm-3 col-12">
                               <div className="dash-widget dash3">
                                 <div className="dash-widgetimg">
                                   <span>
@@ -539,58 +545,27 @@ class Transactionreport extends Component {
                                   <h5>
                                     ₹
                                     <span className="counters">
-                                      {item.online.toFixed(2)}
+                                    {
+                                      item.total
+                                    }
                                     </span>
                                   </h5>
-                                  <h6>Online Sales</h6>
+                                  <h6>{item.txn_method}</h6>
                                 </div>
                               </div>
                             </div>
-                            <div className="col-lg-3 col-sm-3 col-12">
-                              <div className="dash-widget dash4">
-                                <div className="dash-widgetimg">
-                                  <span>
-                                    <i className="iconly-Wallet icli sidebar_icons"></i>
-                                  </span>
-                                </div>
-                                <div className="dash-widgetcontent">
-                                  <h5>
-                                    ₹
-                                    <span className="counters">
-                                      {item.cashsale.toFixed(2)}
-                                    </span>
-                                  </h5>
-                                  <h6>Cash Sales</h6>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* <div className="col-lg-3 col-sm-3 col-12">
-                              <div className="dash-widget dash1">
-                                <div className="dash-widgetimg">
-                                  <span>
-                                    <i className="iconly-Wallet icli sidebar_icons"></i>
-                                  </span>
-                                </div>
-                                <div className="dash-widgetcontent">
-                                  <h5>
-                                    ₹
-                                    <span className="counters">
-                                      {item.weazypay.toFixed(2)}
-                                    </span>
-                                  </h5>
-                                  <h6>Weazy Pay</h6>
-                                </div>
-                              </div>
-                            </div> */}
+                            )
+                          })
+                        }
+                      
                           </div>
                         </div>
                       );
                     })
-                  ) : (
-                    <></>
-                  )}
+                  }
 
+
+                
                   {this.state.data.length > 0 ? (
                     <div className="card">
                       <div className="card-body">
@@ -623,14 +598,19 @@ class Transactionreport extends Component {
                               <thead>
                                 <tr>
                                   <th>S.no</th>
-                                  <th>Order ID</th>
+                                  <th>Date</th>
+                                  {
+                                      this.context.role.stores.length>1 ? <th>Store</th>:null
+                                    }
+                                  <th>Bill No</th>
+                                  <th>Amount</th>
                                   <th>Time</th>
                                   <th>Staff Name</th>
-                                  <th>Amount</th>
+                              
                                   <th>Method</th>
                                   <th>Channel</th>
                                   
-                                  {/* <th>Payment TXN Id</th> */}
+                                  <th>Reference</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -638,28 +618,33 @@ class Transactionreport extends Component {
                                   return (
                                     <tr>
                                       <td>{index + 1}</td>
-
+                                      <td> {moment(item.created_at).format('DD-MM-YYYY')}</td>
+                                      <td>{item.shop_name} {'-'} {item.area} </td>
+                                      {/* {
+                                        this.context.role.stores.length>1 ? <td>{item.orders.store.store_name}</td>:null
+                                      } */}
                                       <td
                                         className="cursor-pointer"
                                         onClick={() => {
                                           this.setState({
                                             open: true,
                                             drawerOrderId:
-                                              item.orders.order_code,
+                                              item.order_code,
                                           });
                                         }}
                                       >
-                                        {item.orders.bill_no}
+                                        {item.bill_no}
+                                      </td>
+                                      <td>₹{item.txn_amount}</td>
+                                      <td>
+                                        {moment(item.created_at).format('hh:mm A')}
                                       </td>
                                       <td>
-                                        {moment(item.created_at).format('lll')}
-                                      </td>
-                                      <td>
-                                        {item.orders.staff !== null
-                                          ? item.orders.staff.staff_name
+                                        {item.staff_name !== null
+                                          ? item.staff_name
                                           : 'N/A'}
                                       </td>
-                                      <td>₹{item.txn_amount.toFixed(2)}</td>
+                                   
 
                                       <td>
                                         {item.txn_method === 'upi' ||
@@ -676,7 +661,7 @@ class Transactionreport extends Component {
                                           ? 'Weazy Pay'
                                           : item.txn_method === 'offline-cash'
                                           ? 'Offline Cash'
-                                          : ''}
+                                          : item.txn_method}
                                       </td>
                                       <td
                                         style={{
@@ -688,7 +673,7 @@ class Transactionreport extends Component {
                                       >
                                         {item.txn_channel}
                                       </td>
-                                      {/* <td>{item.payment_txn_id}</td> */}
+                                      <td>{item.txn_reference === null ? 'N/A' : item.txn_reference}</td>
                                     </tr>
                                   );
                                 })}

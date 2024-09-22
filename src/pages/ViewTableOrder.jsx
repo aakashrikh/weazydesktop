@@ -1,12 +1,11 @@
 import moment from 'moment';
-import React, { Component,createRef } from 'react';
+import React, { Component } from 'react';
 import { Helmet } from 'react-helmet';
 import { RadioButton, RadioGroup } from 'react-radio-buttons';
 import { Modal } from 'react-responsive-modal';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import ReactToPrint from 'react-to-print';
-import { DatePicker, SelectPicker, Timeline } from 'rsuite';
-
+import { DatePicker, SelectPicker } from 'rsuite';
 import { toast } from 'sonner';
 import Swal from 'sweetalert2';
 import { api } from '../../config';
@@ -108,9 +107,6 @@ export class ViewTableOrder extends Component {
 
     this.componentRef = React.createRef([]);
     this.componentRef = [];
-    this.PrintRecipt= createRef();
-    this.kotprints =[];
-    // this.kotprints = createRef();
   }
 
   componentDidMount() {
@@ -119,23 +115,6 @@ export class ViewTableOrder extends Component {
     }, 0);
     this.orderDetails(this.props.id);
     this.fetch_table_vendors();
-  }
-
-  print = ()=>
-  {
-    const contentToPrint = this.PrintRecipt.current.innerHTML;
-    window.electron.send('print', contentToPrint);
-
-    this.handlePrintClick('receipt');
-  }
-
-  printkot = (index)=>
-  {
-
-    const contentToPrint = this.kotprints[index].innerHTML;
-   
-    window.electron.send('print', contentToPrint);
-    this.handlePrintClick('kot');
   }
 
   orderDetails = (id) => {
@@ -189,28 +168,15 @@ export class ViewTableOrder extends Component {
       .finally(() => {});
   };
 
-  addDiscount = (discount, type) => {
-
-    if (
-      this.state.print_receipt == 'gen_receipt' &&
-      this.context.role.staff_role != 'admin' &&
-      this.context.role.staff_role != 'owner'
-    ) {
-      toast.error(
-        'You can not update item once receipt has been generated. Please contact Admin.'
-      );
-      return;
-    }
-    
+  genrate_bill = (discount, type) => {
     // regex to check number and decimal point only
     const regex = /^[0-9]+(\.[0-9]{1,2})?$/;
     if (!regex.test(discount)) {
       toast.error('Please enter valid discount amount');
       return;
     }
-
     this.setState({ generate_order_buttonLoading: true, price_loading: true });
-    fetch(api + 'add_discount_on_order', {
+    fetch(api + 'generate_bill_by_table', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -229,35 +195,13 @@ export class ViewTableOrder extends Component {
         if (!json.status) {
           var msg = json.msg;
         } else {
-         
-          if (json.data[0].discount_type === 'percentage') {
-            var discount = (
-              (json.data[0].order_discount / json.data[0].order_amount) *
-              100
-            ).toFixed(2);
-            this.setState({ discount_on_order: true });
-          } else if (json.data[0].discount_type === 'fixed') {
-            var discount = json.data[0].order_discount;
-            this.setState({ discount_on_order: true });
-          } else {
-            var discount = 0;
-            this.setState({ discount_on_order: false });
+          if (json.data.length > 0) {
+            this.setState({
+              bill: json.data,
+              total_amount: json.data[0].total_amount,
+              data: json.data[0],
+            });
           }
-          this.setState({
-            all_data: json.data,
-            data: json.data[0],
-            cart: json.data[0].cart,
-            user: json.data[0].user,
-            print_receipt: json.data[0].order_for,
-            isLoading: false,
-            table_data: json.data[0].table,
-            total_amount: json.data[0].total_amount,
-            order_code: json.data[0].order_code,
-            discountAmount: discount,
-            percentageDiscount:
-              json.data[0].discount_type === 'percentage' ? true : false,
-          });
-          
         }
         return json;
       })
@@ -442,63 +386,50 @@ export class ViewTableOrder extends Component {
       });
   };
 
+  clear_table_order = () => {
+    if (
+      this.state.print_receipt == 'gen_receipt' &&
+      this.context.role.staff_role != 'admin' &&
+      this.context.role.staff_role != 'owner'
+    ) {
+      toast.error(
+        'You can not clear table once receipt has been generated. Please contact Admin.'
+      );
+      return;
+    }
+    this.setState({ clear_table_buttonLoading: true });
 
-    change_order_status = (status) => {
-      var cancellation_reason = '';
-      if (status == 'cancelled') {
-        if (
-          this.state.print_receipt == 'gen_receipt' &&
-          this.context.role.staff_role != 'admin' &&
-          this.context.role.staff_role != 'owner'
-        ) {
-          toast.error(
-            'You can not Cancel Order once receipt has been generated. Please contact Admin.'
-          );
-          return;
-        }
-        if (this.state.cancellation_reason == 'Other') {
-          cancellation_reason = this.state.other_reason;
+    fetch(api + 'clear_table', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: this.context.token,
+      },
+      body: JSON.stringify({
+        order_code: this.state.data.order_code,
+        table_id: this.props.id,
+        cancellation_reasons: this.state.cancellation_reason,
+      }),
+    })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!json.status) {
+          var msg = json.msg;
+          toast.error(msg);
         } else {
-          cancellation_reason = this.state.cancellation_reason;
+          toast.success('Table Cleared');
+          this.props.navigate('/');
         }
-      }
-      this.setState({ clear_table_buttonLoading: true });
-      fetch(api + 'update_order_status', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: this.context.token,
-        },
-        body: JSON.stringify({
-          order_id: this.state.data.order_code,
-          status: status,
-          cancellation_reason: cancellation_reason,
-          prepare_time: this.state.time,
-          rider_id: this.state.rider_id,
-        }),
+        return json;
       })
-        .then((response) => response.json())
-        .then((json) => {
-          if (!json.status) {
-            var msg = json.msg;
-            toast.error(msg);
-          } else {
-            this.props.navigate('/');
-          
-            toast.success('Order  Updated Successfully');
-          }
-          return json;
-        })
-        .catch((error) => {
-          console.error(error);
-        })
-        .finally(() => {
-          this.setState({ clear_table_buttonLoading: false });
-        });
-    };
-
-    
+      .catch((error) => {
+        console.log(error);
+      })
+      .finally(() => {
+        this.setState({ clear_table_buttonLoading: false });
+      });
+  };
 
   sendUrlToPrint = (url) => {
     var beforeUrl = 'intent:';
@@ -773,19 +704,9 @@ export class ViewTableOrder extends Component {
     }, 500);
   };
 
-  handlePrintClick = (type) => {
+  handlePrintClick = () => {
     var data = this.state.data;
-
-    if(type == 'receipt'){
-      data.print_receipt_count = data.print_receipt_count - 1;
-      }
-  
-      if(type== 'kot')
-      {
-        data.print_kot_count = data.print_kot_count - 1;
-     
-      }
-      
+    data.print_receipt_count = data.print_receipt_count + 1;
     this.setState({ data: data });
     fetch(api + 'update_recipt_print_count', {
       method: 'POST',
@@ -796,7 +717,6 @@ export class ViewTableOrder extends Component {
       },
       body: JSON.stringify({
         order_code: this.state.data.order_code,
-        type: type,
       }),
     })
       .then((response) => response.json())
@@ -865,13 +785,6 @@ export class ViewTableOrder extends Component {
                             </button>
                           )}
 
-{
-      (this.state.print_receipt == 'gen_receipt' &&
-      this.context.role.staff_role != 'admin' &&
-      this.context.role.staff_role != 'owner') ?
-      <></>
-      :
-  <>
                           <Link
                             className="btn btn-secondary btn-sm me-2"
                             to={"/pos/new/" + this.state.data.order_code}
@@ -888,8 +801,6 @@ export class ViewTableOrder extends Component {
                           >
                             <i className="iconly-Discount me-2"></i>Apply Coupon
                           </Link>
-                          </>
-  }
 
                           {this.state.clear_table_buttonLoading ? (
                             <button
@@ -995,7 +906,6 @@ export class ViewTableOrder extends Component {
                                             }}
                                             className="single_item_row"
                                             onClick={() => {
-                                                   this.context.role.staff_role != 'staff' && 
                                               this.setState({
                                                 edit_quantity_modal: true,
                                                 edit_quantity_name:
@@ -1055,13 +965,7 @@ export class ViewTableOrder extends Component {
                                               {item.product_price.toFixed(2)}
                                             </div>
                                             <div className="action_column">
-                                              {
-                                                  this.context.role.staff_role != 'staff'
-                                                  &&
-                                                  <img src={edit_icon} alt="" />
-                                                  
-                                              }
-                                             
+                                              <img src={edit_icon} alt="" />
                                             </div>
                                           </div>
                                         );
@@ -1169,53 +1073,7 @@ export class ViewTableOrder extends Component {
                                   </div>
                                 </div>
                               </div>
-
-                              
                             </div>
-                            {this.state.generate_order_buttonLoading ? (
-                                    <button
-                                      className="btn btn-secondary btn-sm w-100"
-                                      disabled
-                                    >
-                                      <span
-                                        className="spinner-border spinner-border-sm me-2"
-                                        role="status"
-                                      ></span>
-                                      Generating Bill
-                                    </button>
-                                  ) : (
-                                    <button
-                                      className="btn btn-secondary btn-sm w-100"
-                                      onClick={() => {
-                                        this.setState({
-                                          generateBillModal: true,
-                                        });
-                                      }}
-                                    >
-                                      <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
-                                      Settle Order
-                                    </button>
-                                  )}
-
-<br/><br/>
-
-{this.state.data.logs.length > 0 && (
-                          <Timeline className="custom-timeline">
-                            {this.state.data.logs.map((itm, i) => (
-                              <Timeline.Item key={i}>
-                                <div className="d-flex align-items-center">
-                                  <p className="timeline-date m-0">
-                                    {moment(itm.created_at).format('lll')}
-                                  </p>
-                                  <p className="timeline-text ms-2">
-                                    {itm.action} By {itm.staff.staff_name}
-                                  </p>
-                                </div>
-                              </Timeline.Item>
-                            ))}
-                          </Timeline>
-                        )}
-
                             {/* user details */}
                           </div>
                           <div className="col-4">
@@ -1254,7 +1112,12 @@ export class ViewTableOrder extends Component {
                                                 !this.state.percentageDiscount,
                                               discount_on_order: true,
                                             });
-                                          
+                                            if (this.state.discountAmount > 0) {
+                                              this.genrate_bill(
+                                                this.state.discountAmount,
+                                                true
+                                              );
+                                            }
                                           }}
                                         >
                                           Percentage
@@ -1276,7 +1139,12 @@ export class ViewTableOrder extends Component {
                                                 !this.state.percentageDiscount,
                                               discount_on_order: true,
                                             });
-                                            
+                                            if (this.state.discountAmount > 0) {
+                                              this.genrate_bill(
+                                                this.state.discountAmount,
+                                                false
+                                              );
+                                            }
                                           }}
                                         >
                                           Fixed
@@ -1290,11 +1158,7 @@ export class ViewTableOrder extends Component {
                                         type="text"
                                         className="form-control"
                                         placeholder="Value"
-                                        onChange={(e) => {
-                                          this.setState({
-                                            discountAmount: e.target.value,
-                                          });
-                                        }}
+                                        onChange={this.handleChange}
                                         value={
                                           this.state.discountAmount === 0
                                             ? ''
@@ -1306,32 +1170,30 @@ export class ViewTableOrder extends Component {
                                 </div>
   }
                                 <div className="d-flex align-items-center justify-content-end">
-                                  
-                                  {
-                                    this.state.adding_discount_buttonLoading ? (
-                                      <button
-                                        className="btn btn-secondary btn-sm w-100"
-                                        disabled
-                                      >
-                                        <span
-                                          className="spinner-border spinner-border-sm me-2"
-                                          role="status"
-                                        ></span>
-                                        Adding Discount
-                                      </button>
-                                    ) : (
-                                      <button
-                                        className="btn btn-secondary btn-sm w-100"
-                                        onClick={() => {
-                                          this.addDiscount(this.state.discountAmount, this.state.percentageDiscount);
-                                        }}
-                                      >
-                                        Add Discount
-                                      </button>
-                                    )
-                                  }
-
-                                 
+                                  {this.state.generate_order_buttonLoading ? (
+                                    <button
+                                      className="btn btn-secondary btn-sm w-100"
+                                      disabled
+                                    >
+                                      <span
+                                        className="spinner-border spinner-border-sm me-2"
+                                        role="status"
+                                      ></span>
+                                      Generating Bill
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="btn btn-secondary btn-sm w-100"
+                                      onClick={() => {
+                                        this.setState({
+                                          generateBillModal: true,
+                                        });
+                                      }}
+                                    >
+                                      <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
+                                      Complete Order
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1393,8 +1255,6 @@ export class ViewTableOrder extends Component {
                                 </div>
                               </div>
                             ) : null}
-
-
                             {this.state.data.order_status !== 'cancelled' && (
                               <div className="d-flex align-items-center justify-content-center flex-wrap">
                                 {/* {os !== 'Windows' && os !== 'Mac OS' ? (
@@ -1484,26 +1344,12 @@ export class ViewTableOrder extends Component {
                                   <>
                                     {this.state.print_receipt ==
                                     'gen_receipt' ? (
-                                      ((this.context.role.staff_role == 'staff' && this.state.data.print_receipt_count >0) || this.context.role.staff_role != 'staff') &&
-                                      <>
-                                                                        
-                                                                        {
-                                      this.context.isElectron()?
-                               
-                                            <button onClick={()=>{this.print()}} className="btn btn-secondary w-90 d-flex align-items-center justify-content-center button-secondary-color">
-                                              <i className="fa-solid fa-file-invoice print-receipt-icon"></i>
-                                              <p>Print Receipt</p>
-                                            </button>
-                                          
-                                      :
-                                        
                                       <a
                                         onClick={() => {
-                                          this.handlePrintClick('receipt');
+                                          this.handlePrintClick();
                                         }}
                                       >
                                         <ReactToPrint
-                                       
                                           trigger={() => (
                                             <button className="btn btn-secondary w-90 d-flex align-items-center justify-content-center button-secondary-color">
                                               <i className="fa-solid fa-file-invoice print-receipt-icon"></i>
@@ -1513,9 +1359,6 @@ export class ViewTableOrder extends Component {
                                           content={() => this.componentRef2}
                                         />
                                       </a>
-
-                                    }
-                                      </>
                                     ) : (
                                       <a
                                         className="btn btn-secondary me-2 w-45 d-flex align-items-center justify-content-center "
@@ -1539,49 +1382,6 @@ export class ViewTableOrder extends Component {
                                       </a>
                                     )}
 
-
-{this.state.data.request != null ? (
-                          this.state.data.request.map((item, index) => (
-                            <div
-                              className="card flex-fill bg-white"
-                              key={index}
-                            >
-                              <div className="card-header order_details">
-                                <h5>Request</h5>
-                              </div>
-                              <div className="card-body">
-                                <p className="m-0">
-                                  {item.action} - <span></span>
-                                  <b style={{ fontWeight: 'bold' }}>
-                                    {item.status.charAt(0).toUpperCase() +
-                                      item.status.slice(1).toLowerCase()}
-                                  </b>
-                                </p>
-                                {item.status != 'pending' ? (
-                                  <p className="m-0">
-                                    By{' '}
-                                    <span style={{ fontWeight: 'bold' }}>
-                                      {item.approve_staff.staff_name}{' '}
-                                    </span>
-                                    at {moment(item.updated_at).format('lll')}
-                                  </p>
-                                ) : null}
-                                {item.status == 'reject' ||
-                                item.status == 'approved' ? (
-                                  <p className="m-0">
-                                    <span style={{ fontWeight: 'bold' }}>
-                                      Reason-
-                                    </span>{' '}
-                                    {item.comment}
-                                  </p>
-                                ) : null}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <></>
-                        )}
-
                                     {/* {
                                 
                               }
@@ -1600,35 +1400,24 @@ export class ViewTableOrder extends Component {
                                   )}
                                   content={() => this.componentRef['all']}
                                 /> */}
-                                
-                                    { this.state.data.order_status !=
+                                    {this.state.data.order_status !=
                                       'completed' &&
                                       this.state.data.kot.length > 0 &&
                                       this.state.data.kot.map((kot, index) => (
-                                        ((this.context.role.staff_role == 'staff' && this.state.data.print_kot_count >0) || this.context.role.staff_role != 'staff') &&
-                                  <>
+                                        <>
                                           <br />
-                                          {
-                                             this.context.isElectron()?
-                                            <button onClick={()=>{this.printkot(index)}} className="btn btn-secondary w-45 d-flex align-items-center justify-content-center">
-                                              <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
-                                              <p>Print KOT - {kot.kot}</p>
-                                            </button>
-                                          :
                                           <ReactToPrint
-                                          trigger={() => (
-                                            <a className="btn btn-secondary w-45 d-flex align-items-center justify-content-center">
-                                              <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
-                                              <p>Print KOT - {kot.kot}</p>
-                                            </a>
-                                          )}
-                                          content={() => {
-                                            return this.componentRef[index];
-                                          }}
-                                          key={index}
-                                        />
-                                          }
-                                          
+                                            trigger={() => (
+                                              <a className="btn btn-secondary w-45 d-flex align-items-center justify-content-center">
+                                                <i className="fa-solid fa-file-invoice  print-receipt-icon"></i>
+                                                <p>Print KOT - {kot.kot}</p>
+                                              </a>
+                                            )}
+                                            content={() => {
+                                              return this.componentRef[index];
+                                            }}
+                                            key={index}
+                                          />
                                         </>
                                       ))}
                                   </>
@@ -1647,9 +1436,7 @@ export class ViewTableOrder extends Component {
                               />
 
                               {this.state.data.kot.length > 0 &&
-                          
                                 this.state.data.kot.map((kot, index) => (
-                                  <div  key={index} ref={(el) => (this.kotprints[index] = el)}>
                                   <PrintKot
                                     ref={(el) =>
                                       (this.componentRef[index] = el)
@@ -1658,16 +1445,11 @@ export class ViewTableOrder extends Component {
                                     order={this.state.data}
                                     kot={kot.kot}
                                   />
-                                       </div>
                                 ))}
-                           
-
-<div ref={this.PrintRecipt}>
                               <PrintReceipt
                                 ref={(el2) => (this.componentRef2 = el2)}
                                 order={this.state.data}
                               />
-                              </div>
                             </div>
                           </div>
                         </div>
@@ -1858,7 +1640,7 @@ export class ViewTableOrder extends Component {
                           iconInnerSize={10}
                           padding={10}
                         >
-                       UPI
+                          Google Pay/Paytm/UPI
                         </RadioButton>
                         <RadioButton
                           value="Card"
@@ -2572,7 +2354,7 @@ export class ViewTableOrder extends Component {
                           confirmButtonText: 'Yes, clear it!',
                         }).then((result) => {
                           if (result.isConfirmed) {
-                         this.change_order_status('cancelled');
+                            this.clear_table_order();
                           }
                         });
                       } else {

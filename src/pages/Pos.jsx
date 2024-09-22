@@ -166,19 +166,22 @@ class Pos extends Component {
 
 
   componentDidMount() {
-    if (!this.context.user.is_billing_enable) {
+
+    if (!this.context.role.is_billing_enabled || !this.context.user.is_billing_enabled){
       if (
         this.context.role.staff_role != 'owner' &&
         this.context.role.staff_role != 'admin'
       ) {
         this.setState({ billing_disable: true });
         Swal.fire({
+          icon: 'error',
           title: 'Billing Disabled',
           text: 'Billing is disabled for your account. Please contact support.',
           showCancelButton: false,
           confirmButtonColor: '#0066b2',
           cancelButtonColor: '#d33',
           confirmButtonText: 'Go to Dashboard',
+          allowOutsideClick: false,
         }).then((result) => {
           if (result.isConfirmed) {
             this.props.navigate('/');
@@ -1370,7 +1373,50 @@ class Pos extends Component {
     response['charges_tax'] = sum_tax;
     return response;
   };
+
+  change_location = (e)=>
+    {
+     fetch(api + 'switch_store', {
+       method: 'POST',
+       headers: {
+         Accept: 'application/json',
+         'Content-Type': 'application/json',
+         Authorization: this.context.token,
+       },
+       body: JSON.stringify({
+         store_id: e
+       }),
+     })
+       .then((response) => response.json())
+       .then((json) => {
+         if (json.msg === 'ok') {
+ 
+           var steps = 'done';
+           const data = {
+             token: json.token,
+             vendor_id: json.usr,
+             step: 'done',
+           };
+           localStorage.setItem('@auth_login', JSON.stringify(data));
+           window.location.reload();
+           toast.success('You are now in this store!');
+         } else {
+           toast.error(json.msg);
+         }
+         return json;
+       })
+       .catch((error) => console.error(error))
+       .finally(() => {});
+   }
+
   render() {
+    const data = this.context.role.stores.map((item, index) => (
+      
+      {
+      label: item.shop_name == null ? 'N/A' : item.shop_name + ' - ' + item.area,
+      value: item.vendor_uu_id,
+    }));
+
     return (
       <>
         <Helmet>
@@ -1407,7 +1453,7 @@ class Pos extends Component {
                       {this.state.postheme == 1 ? (
                         <>
                           <div className="row p-2 pe-3">
-                            <div className="col-lg-3 col-sm-12 d-flex justify-content-start align-items-center">
+                            <div className="col-lg-2 col-sm-12 d-flex justify-content-start align-items-center">
                               <div className="logo">
                                 {this.context.user.shop_name === null ||
                                 this.context.user.shop_name === '' ? (
@@ -1425,13 +1471,16 @@ class Pos extends Component {
                                     <img
                                       src={logo_black_full}
                                       alt="img"
-                                      style={{ width: '110px' }}
+                                      style={{ width: '200px' }}
                                     />
                                   </Link>
                                 )}
                               </div>
                             </div>
-                            <div className="col-lg-4 col-sm-12 nav user-menu d-flex justify-content-end align-items-center">
+                            <div className="col-lg-6 col-sm-12 nav user-menu d-flex justify-content-end align-items-center">
+
+              
+
                               <li className="nav-item dropdown">
                                 <Link to="/">
                                   <i className="iconly-Home icli sidebar_icons"></i>
@@ -1450,6 +1499,28 @@ class Pos extends Component {
                                   <i className="fa-solid fa-expand"></i>
                                 </a>
                               </li>
+
+                              {
+                this.context.role.stores.length>1 && <li className="nav-item dropdown has-arrow main-drop">
+          
+            <SelectPicker
+                                data={data}
+                                cleanable={false}
+                                placeholder="Choose Location"
+                                onChange={(e) => {
+                                  this.change_location(e);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  borderColor: 'rgba(145, 158, 171, 0.32)',
+                                }}
+                                value={this.context.user.vendor_uu_id}
+                              />
+
+            </li>
+          }
+
+&nbsp;
 
                               {this.state.pickuppoints.length > 0 ? (
                                 <li className="nav-item">
@@ -1476,7 +1547,7 @@ class Pos extends Component {
                                 <div></div>
                               )}
                             </div>
-                            <div className="col-lg-5 col-sm-12  d-flex justify-content-end align-items-center p-0">
+                            <div className="col-lg-4 col-sm-12  d-flex justify-content-end align-items-center p-0">
                               <RadioGroup
                                 value={this.state.order_method}
                                 // value={this.state.is_veg}
@@ -3638,13 +3709,15 @@ class Products extends Component {
     });
 
     if (flag) {
-      this.setState({ openModal: false, addons: [] });
+      this.setState({ openModal: false, addons: [], variants_id: 0 });
 
       this.props.cart(this.props.data, this.state.variants_id, addon, 1);
     }
   };
 
+
   add_cart(product) {
+  
     if (product.addon_map.length > 0 || product.variants.length > 0) {
       if (product.variants.length > 0) {
         var vv = product.variants[0].id;
@@ -3659,7 +3732,8 @@ class Products extends Component {
       this.setState({
         addon: [],
       });
-      this.props.cart(product, this.state.variants_id, this.state.addon, 1);
+
+      this.props.cart(product, 0, this.state.addon, 1);
     }
   }
 

@@ -3,12 +3,12 @@ import Pusher from 'pusher-js';
 import React, { Component } from 'react';
 import OneSignal from 'react-onesignal';
 import {
-  json,
   Route,
   Routes,
   useLocation,
   useNavigate,
   useParams,
+  BrowserRouter as Router,
 } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { api, pusher } from '../config.js';
@@ -75,6 +75,8 @@ import Subscription from './pages/Subscription.jsx';
 import Suppliers from './pages/Suppliers.jsx';
 import Transactionreport from './pages/Transactionreport.jsx';
 import Closingreport from './pages/Closingreport.jsx';
+import Discountreport from './pages/Discountreport.jsx';
+import Cancellationreport from './pages/Cancellationreport.jsx';
 import UpdateProductRecipe from './pages/UpdateProductRecipe.jsx';
 import Updategst from './pages/Updategst.jsx';
 import Updatetiming from './pages/Updatetiming.jsx';
@@ -90,10 +92,8 @@ import StaffLogReport from './pages/StaffLogReport.jsx';
 import TransactionNumber from './pages/TransactionNumber.jsx';
 import Expense from './pages/Expense.jsx';
 import StockAdjustment from './pages/StockAdjustment.jsx';
-
+import Updateprices from './pages/Updateprices.jsx';
 OneSignal.init({ appId: '49e49fa7-d31e-42d9-b1d5-536c4d3758cc' });
-import { saveUserData, getUserData, removeUserData } from './indexedDB';
-import  secureLocalStorage  from  "react-secure-storage";
 
 export class App extends Component {
   constructor(props) {
@@ -110,13 +110,10 @@ export class App extends Component {
       width: window.innerWidth,
       products: [],
       category: [],
-      data: [],
-      kot_data: [],
+      is_enterprise:false
     };
-    this.componentRef = {};
   }
 
-  
   isElectron = () =>
     {
       const isElectron = (typeof window.process === 'object' && window.process.versions && window.process.versions.electron) ||
@@ -124,235 +121,237 @@ export class App extends Component {
   
       return isElectron;
     }
-  
-  async  componentDidMount() {
+
+    async  componentDidMount() {
     
-    let token=null;
-let items = null;
-    if(this.isElectron())
-      {
-        const response = await window.electron.getCredentials('AUTHMAIN');
-        
-        if (response.status === 'success') {
-          token=response.credentials.token;
+      let token=null;
+  let items = null;
+      if(this.isElectron())
+        {
+          const response = await window.electron.getCredentials('AUTHMAIN');
+          
+          if (response.status === 'success') {
+            token=response.credentials.token;
+          } else {
+            this.logout();
+          }
+  
+        }
+        else
+        {
+          items = JSON.parse(localStorage.getItem('@auth_login'));
+            if(items == null )
+            {
+              this.logout();
+            }
+            else
+            {
+              token=items.token;
+            }
+        }
+  
+      //  const items = JSON.parse(localStorage.getItem('@auth_login'));
+        if (token != null) {
+          this.fetchProducts(0, [], 'all', 1, token);
+          this.fetchCategories('sort_order',token);
+          this.get_profile(token);
         } else {
           this.logout();
         }
-
-      }
-      else
-      {
-           items = secureLocalStorage.getItem("object");
-          if(items == null )
-          {
-            this.logout();
-          }
-          else
-          {
-            token=items.token;
-          }
-      }
-
-    //  const items = JSON.parse(localStorage.getItem('@auth_login'));
-      if (token != null) {
-        this.fetchProducts(0, [], 'all', 1, token);
-        this.fetchCategories('sort_order',token);
-        this.get_profile(token);
-      } else {
-        this.logout();
-      }
-
-
-      window.addEventListener('resize', this.handleWindowSizeChange);
-      if (this.state.width <= 768) {
-        this.props.navigate('/not-available');
-      } else {
-        const path = this.props.location.pathname;
-        this.props.navigate(path, { replace: true });
-      }
-      getOS();
-    }
-    
-    fetchProducts = (category_id, products, type, page, token) => {
-      this.setState({ load_item: true });
-      fetch(api + 'vendor_get_vendor_product', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: token,
-        },
-        body: JSON.stringify({
-          vendor_category_id: category_id,
-          product_type: type,
-          page: page,
-          status: 'active',
-          sort_by: this.state.sort_by,
-        }),
-      })
-        .then((response) => response.json())
-        .then((json) => {
-          if (!json.status) {
-            var msg = json.msg;
-            if (page == 1) {
-              this.setState({ products: [] });
-            }
-          } else {
-            if (json.data.data.length > 0) {
-              this.setState({ products: json.data.data });
-            }
-          }
-          this.setState({ load_item: false, isloading: false });
-          return json;
-        })
-        .catch((error) => {
-          console.error(error);
-        })
-        .finally(() => {});
-    };
   
-    fetchCategories = (sort_by, token) => {
-      fetch(api + 'fetch_vendor_category', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: token,
-        },
-        body: JSON.stringify({
-          sort_by: sort_by,
-        }),
-      })
-        .then((response) => response.json())
-        .then((json) => {
-          if (!json.status) {
-          } else {
-            this.setState({ category: json.data });
-          }
-          this.setState({ load_item: false, isloading: false });
-          return json;
-        })
-        .catch((error) => console.error(error))
-        .finally(() => {});
-    };
   
-    handleWindowSizeChange = () => {
-      this.setState({
-        width: window.innerWidth,
-      });
-    };
-  
-    componentWillUnmount() {
-      window.removeEventListener('resize', this.handleWindowSizeChange);
-    }
-  
-    login = (step, user, role, token) => {
-      this.setState({
-        is_login: true,
-        step: step,
-        user: user,
-        token: token,
-        loading: false,
-        login_data: role,
-      });
-  
-      OneSignal.sendTag('id', '' + user.id);
-      OneSignal.sendTag('account_type', 'vendor-bmguj1sfd77232927ns');
-  
-      window.Pusher = Pusher;
-      window.Echo = new Echo({
-        broadcaster: 'pusher',
-        key: pusher,
-        // wsHost: '3.109.105.185',
-        // wsHost: 'websockets.webixun.com',
-        // wsPort: 1337,
-        cluster: 'ap2',
-        forceTLS: true,
-        disableStats: true,
-        authEndpoint: api + 'broadcasting/auth',
-        auth: {
-          headers: {
-            Accept: 'application/json',
-            Authorization: token,
-          },
-        },
-      });
-  
-      window.Echo.private(`NotificationChannel.` + user.id).listen(
-        '.notification.created',
-        (e) => {
-          toast.success(e.orders.msg.title, {
-            position: 'top-right',
-            toastId: 'success1',
-          });
-  
-          var sound = new Howl({
-            src: ['notification.mp3'],
-            html5: true,
-          });
-          sound.play();
-          Dashboard.orderupdate(e.orders.msg.title);
+        window.addEventListener('resize', this.handleWindowSizeChange);
+        if (this.state.width <= 768) {
+          this.props.navigate('/not-available');
+        } else {
+          const path = this.props.location.pathname;
+          this.props.navigate(path, { replace: true });
         }
-      );
-    };
-  
-    get_profile = (token) => {
-      fetch(api + 'get_vendor_profile', {
-        method: 'POST',
+        getOS();
+      }
+
+  fetchProducts = (category_id, products, type, page, token) => {
+    this.setState({ load_item: true });
+    fetch(api + 'vendor_get_vendor_product', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: token,
+      },
+      body: JSON.stringify({
+        vendor_category_id: category_id,
+        product_type: type,
+        page: page,
+        status: 'active',
+        sort_by: this.state.sort_by,
+      }),
+    })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!json.status) {
+          var msg = json.msg;
+          if (page == 1) {
+            this.setState({ products: [] });
+          }
+        } else {
+          if (json.data.data.length > 0) {
+            this.setState({ products: json.data.data });
+          }
+        }
+        this.setState({ load_item: false, isloading: false });
+        return json;
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {});
+  };
+
+  fetchCategories = (sort_by, token) => {
+    fetch(api + 'fetch_vendor_category', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: token,
+      },
+      body: JSON.stringify({
+        sort_by: sort_by,
+      }),
+    })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!json.status) {
+        } else {
+          this.setState({ category: json.data });
+        }
+        this.setState({ load_item: false, isloading: false });
+        return json;
+      })
+      .catch((error) => console.error(error))
+      .finally(() => {});
+  };
+
+  handleWindowSizeChange = () => {
+    this.setState({
+      width: window.innerWidth,
+    });
+  };
+
+  componentWillUnmount() {
+    window.removeEventListener('resize', this.handleWindowSizeChange);
+  }
+
+  login = (step, user, role, token) => {
+    this.setState({
+      is_login: true,
+      step: step,
+      user: user,
+      token: token,
+      loading: false,
+      login_data: role,
+    });
+
+    OneSignal.sendTag('id', '' + user.id);
+    OneSignal.sendTag('account_type', 'vendor-bmguj1sfd77232927ns');
+
+    window.Pusher = Pusher;
+    window.Echo = new Echo({
+      broadcaster: 'pusher',
+      key: pusher,
+      // wsHost: '3.109.105.185',
+      // wsHost: 'websockets.webixun.com',
+      // wsPort: 1337,
+      cluster: 'ap2',
+      forceTLS: true,
+      disableStats: true,
+      authEndpoint: api + 'broadcasting/auth',
+      auth: {
         headers: {
           Accept: 'application/json',
-          'Content-Type': 'application/json',
           Authorization: token,
         },
-        body: JSON.stringify({}),
-      })
-        .then((response) => response.json())
-        .then((json) => {
-          if (json.message === 'Unauthenticated.') {
-            this.logout();
-          }
-          if (!json.status) {
-            this.logout();
-          } else {
-            this.login(json.step, json.data[0], json.user, token);
-          }
-          return json;
-        })
-        .catch((error) => {
-          console.error(error);
-        })
-        .finally(() => {
-          this.setState({ isloading: false });
-        });
-    };
-  
-    logout = async () => {
-      
-     
-      this.setState({
-        is_login: false,
-        loading: false,
-        token: '',
-        user: [],
-        login_data: [],
-      });
+      },
+    });
 
-      if(this.isElectron())
-      {
-          const response = await window.electron.deleteCredentials('AUTHMAIN');
-          if (response.status === 'success') {
-           
-          } else {
-            console.log(response.error);
+    window.Echo.private(`NotificationChannel.` + user.id).listen(
+      '.notification.created',
+      (e) => {
+        toast.success(e.orders.msg.title, {
+          position: 'top-right',
+          toastId: 'success1',
+        });
+
+        var sound = new Howl({
+          src: ['notification.mp3'],
+          html5: true,
+        });
+        sound.play();
+        Dashboard.orderupdate(e.orders.msg.title);
+      }
+    );
+  };
+
+  get_profile = (token) => {
+    fetch(api + 'get_vendor_profile', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: token,
+      },
+      body: JSON.stringify({}),
+    })
+      .then((response) => response.json())
+      .then((json) => {
+        if (json.message === 'Unauthenticated.') {
+          this.logout();
+        }
+        if (!json.status) {
+          this.logout();
+        } else {
+          this.login(json.step, json.data[0], json.user, token);
+          if(json.user.stores.length > 1 && json.data[0].parent_id == 0){
+            this.setState({is_enterprise:true})
           }
-      }
-      else
-      {
-        secureLocalStorage.removeItem('object');
-      }
-     
-    };
-  
+        }
+        return json;
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {
+        this.setState({ isloading: false });
+      });
+  };
+
+  logout = async () => {
+    this.setState({
+      is_login: false,
+      loading: false,
+      token: '',
+      user: [],
+      login_data: [],
+    });
+
+    if(this.isElectron())
+    {
+        const response = await window.electron.deleteCredentials('AUTHMAIN');
+        if (response.status === 'success') {
+         
+        } else {
+          console.log(response.error);
+        }
+    }
+    else
+    {
+      localStorage.clear();
+    }
+   
+  };
+
+
   render() {
     return this.state.loading ? (
       <div className="preloader">
@@ -377,7 +376,8 @@ let items = null;
             step: this.state.step,
             products: this.state.products,
             category: this.state.category,
-            isElectron:this.isElectron
+            isElectron:this.isElectron,
+            is_enterprise:this.state.is_enterprise
           }}
         >
           <Routes>
@@ -426,6 +426,7 @@ let items = null;
                 </RequireAuth>
               }
             />
+            
             <Route
               exact
               path="/expense"
@@ -434,7 +435,8 @@ let items = null;
                   <Expense />
                 </RequireAuth>
               }
-            />
+              />
+
             <Route
               exact
               path="/kot"
@@ -543,6 +545,17 @@ let items = null;
                 </RequireAuth>
               }
             />
+
+<Route
+              exact
+              path="/Updateprices"
+              element={
+                <RequireAuth>
+                  <Updateprices />
+                </RequireAuth>
+              }
+            />
+
             <Route
               exact
               path="/InventoryReport"
@@ -561,6 +574,26 @@ let items = null;
                 </RequireAuth>
               }
             />
+
+            <Route
+              exact
+              path="/discountreport"
+              element={
+                <RequireAuth>
+                  <Discountreport />
+                </RequireAuth>
+              }
+            />
+     <Route
+              exact
+              path="/cancellationreport"
+              element={
+                <RequireAuth>
+                  <Cancellationreport />
+                </RequireAuth>
+              }
+            />
+
             <Route
               exact
               path="/updategst"
@@ -633,7 +666,8 @@ let items = null;
                 </RequireAuth>
               }
             />
-            <Route
+
+<Route
               exact
               path="/StockAdjustment"
               element={
@@ -642,6 +676,8 @@ let items = null;
                 </RequireAuth>
               }
             />
+
+
             <Route exact path="/subscription" element={<Subscription />} />
             <Route
               exact
@@ -652,7 +688,8 @@ let items = null;
                 </RequireAuth>
               }
             />
-            <Route
+
+<Route
               exact
               path="/closingreport/"
               element={
@@ -661,6 +698,8 @@ let items = null;
                 </RequireAuth>
               }
             />
+
+
             <Route
               exact
               path="/myreport"
@@ -688,7 +727,8 @@ let items = null;
                 </RequireAuth>
               }
             />
-            <Route
+
+<Route
               exact
               path="/transactionnumber"
               element={
@@ -697,6 +737,7 @@ let items = null;
                 </RequireAuth>
               }
             />
+
             <Route
               exact
               path="/productreport/:category_id/:start/:end"
@@ -1021,11 +1062,15 @@ let items = null;
                 </CheckLogin>
               }
             />
+
+        <Route exact path="/loginpassword" element={    <CheckLogin><LoginPassword /></CheckLogin>} />
+
+
             <Route path="*" element={<Pagenotfound />} />
             <Route exact path="/logout" element={<Logout />} />
             <Route exact path="/datatable" element={<DataTable />} />
             <Route exact path="/not-available" element={<NotAvailable />} />
-            <Route exact path="/loginpassword" element={<LoginPassword />} />
+         
           </Routes>
         </AuthContext.Provider>
         <Toaster
@@ -1037,25 +1082,6 @@ let items = null;
             },
           }}
         />
-        {/* <div className="d-flex justify-content-center">
-          <button onClick={this.handleInsert}>Insert</button>
-          <button onClick={this.handleFetch}>Fetch</button>
-        </div> */}
-        {this.state.kot_data.length > 0 ? (
-          <ReactToPrint
-            bodyClass="react-to-print-body"
-            trigger={() => (
-              <div ref={this.componentRef} style={{ display: 'none' }}>
-                <PrintKot
-                  ref={(el) => (this.componentRef[-1] = el)}
-                  order={this.state.data}
-                  kot={this.state.kot_data[this.state.kot_data.length - 1].kot}
-                />
-              </div>
-            )}
-            content={() => this.componentRef[-1]}
-          />
-        ) : null}
       </>
     );
   }

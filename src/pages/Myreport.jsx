@@ -1,7 +1,10 @@
 import moment from 'moment';
 import React, { Component } from 'react';
+import { CSVLink } from 'react-csv';
 import { Helmet } from 'react-helmet';
 import InfiniteScroll from 'react-infinite-scroll-component';
+import { useParams } from 'react-router-dom';
+import { DateRangePicker,CheckPicker  } from 'rsuite';
 import { api } from '../../config';
 import { AuthContext } from '../AuthContextProvider';
 import no_order from '../assets/images/no-transaction.webp';
@@ -21,30 +24,60 @@ class Myreport extends Component {
     isOpen: false,
     from: new Date(),
     to: new Date(),
-    range: 'today',
+    range: this.props.range,
     last_page: 1,
     total: 0,
-    upi: 0,
-    card:0,
-    cash: 0,
-    weazypay: 0,
-    method: 'all',
+   payment_methods: [],
+    method: this.props.property,
     itemsPerPage: 50,
     downloaded_data: [],
     loading: false,
+    add_data: [],
+    staff_id: 0,
+    staff_sale: [],
     open: false,
     drawerOrderId: '',
+    download_csv: false,
+    store:[],
+  };
+
+  setDate = (e) => {
+    this.setState({ from: e[0], to: e[1] });
   };
 
   componentDidMount() {
     window.setTimeout(() => {
       window.scrollTo(0, 0);
     }, 0);
-    this.fetch_order(1, 'today');
+    this.fetch_order(1, this.state.range, this.state.method);
+    this.fetch_staff();
+
   }
 
-  fetch_order = (page_id, range) => {
-    fetch(api + 'get_staff_data', {
+  fetch_staff = () => {
+    fetch(api + 'fetch_staff', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.context.token,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status) {
+          this.setState({ add_data: data.data, is_loding: false });
+        } else {
+          this.setState({ is_loding: false });
+        }
+      })
+      .catch((err) => {
+        this.setState({ is_loding: false });
+      });
+  };
+
+  fetch_order = (page_id, range, method) => {
+
+    fetch(api + 'fetch_sales_reports', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -53,11 +86,13 @@ class Myreport extends Component {
       },
       body: JSON.stringify({
         page: page_id,
-        range: range,
+        range: 'custom',
         start_date: this.state.from,
         end_date: this.state.to,
-        method: this.state.method,
+        method: method,
         page_length: this.state.itemsPerPage,
+        staff_id: this.context.role.staff_id,
+        store:this.state.store
       }),
     })
       .then((response) => response.json())
@@ -67,21 +102,24 @@ class Myreport extends Component {
             this.setState({
               data: [],
               total: 0,
-              card: 0,
-              upi: 0,
-              cash: 0,
-              weazypay: 0,
+              payment_methods: [],
             });
           }
         } else {
+          if (json.staff != undefined) {
+        
+            this.setState({ staff_sale: json.staff });
+          }
+          else
+          {
+            this.setState({ staff_sale: [] });
+          }
           this.setState({
             next_page: json.data.next_page_url,
             total: json.total_earnning,
-            card: json.card,
-            upi: json.upi,
-            cash: json.cashsale,
-            weazypay: json.weazypay,
+            payment_methods:json.method
           });
+
           if (page_id == 1) {
             this.setState({ data: json.data.data });
           } else {
@@ -107,11 +145,76 @@ class Myreport extends Component {
       });
   };
 
+  onSelect = (selectedList) => {
+    {
+      this.props.store_d !== undefined
+        ? this.setState({ store: [] })
+        : null;
+    }
+    const store = [];
+    selectedList.map((item, index) => {
+      store.push(item);
+    });
+    this.setState({ store: store });
+  };
+
+  onRemove = (selectedList) => {
+    // remove from selectedList.
+    const store = [];
+    selectedList.map((item, index) => {
+      store.push(item);
+    });
+    this.setState({ store: store });
+  };
+
+
+  fetch_csv = () => {
+    this.setState({ download_csv: true });
+   fetch(api + 'fetch_sales_reports', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: this.context.token,
+    },
+    body: JSON.stringify({
+      page: 1,
+      range: 'custom',
+      start_date: this.state.from,
+      end_date: this.state.to,
+      method: this.state.method,
+      page_length: 'all',
+      staff_id: this.state.staff_id,
+      store:this.state.store
+    }),
+  })
+   .then((respose) => respose.blob())
+   .then((blob) => {
+     const url = window.URL.createObjectURL(new Blob([blob]));
+     const link = document.createElement('a');
+     link.href = url;
+     link.setAttribute('download', 'products_report.csv');
+     document.body.appendChild(link);
+     link.click();
+     this.setState({download_csv: false});
+   });
+ };
+
+
+
   render() {
+    const data = this.context.role.stores.map((item, index) => (
+      
+      {
+      label: item.shop_name == null ? 'N/A' : item.shop_name + '-' + item.area,
+      value: item.vendor_uu_id,
+    }));
+
+
     return (
       <>
         <Helmet>
-          <title>My Report</title>
+          <title>Sales Report</title>
         </Helmet>
         <div className="main-wrapper">
           <Header sidebar={true} />
@@ -119,7 +222,7 @@ class Myreport extends Component {
             <div className="content">
               <div className="page-header">
                 <div className="page-title">
-                  <h4>My Report</h4>
+                  <h4>Transactions Report</h4>
                 </div>
               </div>
 
@@ -132,28 +235,116 @@ class Myreport extends Component {
                       <ul className="nav nav-tabs nav-tabs-solid nav-tabs-rounded nav-justified">
                         <li className="nav-item">
                           <label>Time</label>
+                          <DateRangePicker
+                            onChange={(e) => {
+                              this.setDate(e);
+                            }}
+                            cleanable={false}
+                            className="form-control border-none py-0 ps-0"
+                            style={{ height: '38px' }}
+                            size="md"
+                            ranges={[
+                              {
+                                label: 'Today',
+                                value: [moment().toDate(), moment().toDate()],
+                              },
+                              {
+                                label: 'Yesterday',
+                                value: [
+                                  moment().subtract(1, 'days').toDate(),
+                                  moment().subtract(1, 'days').toDate(),
+                                ],
+                              },
+                              {
+                                label: 'This Week',
+                                value: [
+                                  moment().startOf('week').toDate(),
+                                  moment().endOf('week').toDate(),
+                                ],
+                              },
+                              {
+                                label: 'Last Week',
+                                value: [
+                                  moment()
+                                    .subtract(1, 'week')
+                                    .startOf('week')
+                                    .toDate(),
+                                  moment()
+                                    .subtract(1, 'week')
+                                    .endOf('week')
+                                    .toDate(),
+                                ],
+                              },
+                              {
+                                label: 'This Month',
+                                value: [
+                                  moment().startOf('month').toDate(),
+                                  moment().endOf('month').toDate(),
+                                ],
+                              },
+                              {
+                                label: 'Last Month',
+                                value: [
+                                  moment()
+                                    .subtract(1, 'month')
+                                    .startOf('month')
+                                    .toDate(),
+                                  moment()
+                                    .subtract(1, 'month')
+                                    .endOf('month')
+                                    .toDate(),
+                                ],
+                              },
+                              {
+                                label: 'Life-Time',
+                                value: [
+                                  moment(this.context.user.created_at).toDate(),
+                                  moment().toDate(),
+                                ],
+                              },
+                            ]}
+                          />
+                        </li>
+
+                        <li className="nav-item">
+                          <label>Select Method</label>
                           <select
                             className="form-control"
                             onChange={(e) => {
-                              if (e.target.value == 'customrange') {
-                                this.setState({
-                                  isOpen: !this.state.isOpen,
-                                  range: 'custom',
-                                });
-                              } else {
-                                this.setState({
-                                  isOpen: false,
-                                  range: e.target.value,
-                                });
-                              }
+                              this.setState({
+                                method: e.target.value,
+                              });
                             }}
-                            value={this.state.value}
+                            value={this.state.method}
                             style={{ width: '150px', marginRight: '10px' }}
+                            // className="select-container"
                           >
-                            <option value="today">Today</option>
-                            <option value="yesterday">Yesterday</option>
+                            <option value="all">All</option>
+                            <option value="cash">Cash</option>
+                            <option value="upi">UPI</option>
+                            <option value="card">Debit/Credit Card</option>
+                            <option value="online">Weazy Pay</option>
+                            <option value="Swiggy Dine In">
+                              Swiggy Dine In
+                            </option>
+                            <option value="Zomato Dine In">
+                              Zomato Dine In
+                            </option>
+                            <option value="Eazy Diner">Eazy Diner</option>
+                            <option value="Paytm">Paytm</option>
+                            <option value="PhonePe">PhonePe</option>
+                            <option value="Amazon Pay">Amazon Pay</option>
+                            <option value="Gpay">Gpay</option>
+                            <option value="'BharatPe">BharatPe</option>
+                            <option value="MagicPin">MagicPin</option>
+                            <option value="DotPe">DotPe</option>
+                            <option value="Dunzo">Dunzo</option>
+
                           </select>
                         </li>
+
+                   
+
                         <li className="nav-item" style={{ paddingTop: 20 }}>
                           <button
                             className="btn btn-secondary"
@@ -161,24 +352,31 @@ class Myreport extends Component {
                             data-bs-toggle="tab"
                             onClick={() => {
                               this.setState({ is_loading: true });
-                              this.fetch_order(1, this.state.range);
+                              this.fetch_order(
+                                1,
+                                this.state.range,
+                                this.state.method
+                              );
+                            
                             }}
                           >
                             Search
                           </button>
                         </li>
                       </ul>
+                    
+                     
                     </div>
                   </div>
                 </section>
               </div>
               {!this.state.is_loading ? (
                 <>
-                  {this.state.method == 'all' ? (
+                
                     <div className="dashboard-status-card">
                       <div className="row w-100">
                         <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash1">
+                          <div className="dash-widget dash">
                             <div className="dash-widgetimg">
                               <span>
                                 <i className="iconly-Wallet icli sidebar_icons"></i>
@@ -188,117 +386,116 @@ class Myreport extends Component {
                               <h5>
                                 ₹
                                 <span className="counters">
-                                  {this.state.total.toFixed(2)}
+                                  {this.state.total}
                                 </span>
                               </h5>
                               <h6>Total</h6>
                             </div>
                           </div>
                         </div>
-
-                        <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash3">
-                            <div className="dash-widgetimg">
-                              <span>
-                                <i className="iconly-Wallet icli sidebar_icons"></i>
-                              </span>
+                        {
+                          this.state.payment_methods.length > 0 &&
+                          this.state.payment_methods.map((item, index) => {
+                            return (
+                              <div className="col-lg-3 col-sm-3 col-12">
+                              <div className="dash-widget dash2">
+                                <div className="dash-widgetimg">
+                                  <span>
+                                    <i className="iconly-Wallet icli sidebar_icons"></i>
+                                  </span>
+                                </div>
+                                <div className="dash-widgetcontent">
+                                  <h5>
+                                    ₹
+                                    <span className="counters">
+                                      {item.total}
+                                    </span>
+                                  </h5>
+                                  <h6>{item.txn_method	} </h6>
+                                </div>
+                              </div>
                             </div>
-                            <div className="dash-widgetcontent">
-                              <h5>
-                                ₹
-                                <span className="counters">
-                                  {this.state.cash.toFixed(2)}
-                                </span>
-                              </h5>
-                              <h6>Cash Sales</h6>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash2">
-                            <div className="dash-widgetimg">
-                              <span>
-                                <i className="iconly-Wallet icli sidebar_icons"></i>
-                              </span>
-                            </div>
-                            <div className="dash-widgetcontent">
-                              <h5>
-                                ₹
-                                <span className="counters">
-                                  {this.state.upi.toFixed(2)}
-                                </span>
-                              </h5>
-                              <h6>UPI</h6>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash2">
-                            <div className="dash-widgetimg">
-                              <span>
-                                <i className="iconly-Wallet icli sidebar_icons"></i>
-                              </span>
-                            </div>
-                            <div className="dash-widgetcontent">
-                              <h5>
-                                ₹
-                                <span className="counters">
-                                  {this.state.card.toFixed(2)}
-                                </span>
-                              </h5>
-                              <h6>Card</h6>
-                            </div>
-                          </div>
-                        </div>
-
+                            )
+                          })
+                          
+                        }
                        
+                      
+                      </div>
+                    </div>
+                 
 
-                        <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash4">
-                            <div className="dash-widgetimg">
-                              <span>
-                                <i className="iconly-Wallet icli sidebar_icons"></i>
-                              </span>
+
+
+{this.state.staff_sale.length > 1 &&
+                  
+                    this.state.staff_sale.map((item, index) => {
+                      return (
+                        <div className="dashboard-status-card">
+                          <div className="row w-100">
+                            <h6
+                              style={{
+                                borderBottom: '1px solid #ececec',
+                                marginBottom: '10px',
+                              }}
+                            >
+                              {item.staff_name}
+                            </h6>
+
+                            <div className="col-lg-3 col-sm-3 col-12">
+                              <div className="dash-widget dash2">
+                                <div className="dash-widgetimg">
+                                  <span>
+                                    <i className="iconly-Wallet icli sidebar_icons"></i>
+                                  </span>
+                                </div>
+                                <div className="dash-widgetcontent">
+                                  <h5>
+                                    ₹
+                                    <span className="counters">
+                                      {item.total}
+                                    </span>
+                                  </h5>
+                                  <h6>Total</h6>
+                                </div>
+                              </div>
                             </div>
-                            <div className="dash-widgetcontent">
-                              <h5>
-                                ₹
-                                <span className="counters">
-                                  {this.state.weazypay.toFixed(2)}
-                                </span>
-                              </h5>
-                              <h6>Weazy Pay</h6>
+
+                        {
+                          item.method.map((item, index) => {
+                            return (
+                              <div className="col-lg-3 col-sm-3 col-12">
+                              <div className="dash-widget dash3">
+                                <div className="dash-widgetimg">
+                                  <span>
+                                    <i className="iconly-Wallet icli sidebar_icons"></i>
+                                  </span>
+                                </div>
+                                <div className="dash-widgetcontent">
+                                  <h5>
+                                    ₹
+                                    <span className="counters">
+                                    {
+                                      item.total
+                                    }
+                                    </span>
+                                  </h5>
+                                  <h6>{item.txn_method}</h6>
+                                </div>
+                              </div>
                             </div>
+                            )
+                          })
+                        }
+                      
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="dashboard-status-card">
-                      <div className="row w-100">
-                        <div className="col-lg-3 col-sm-3 col-12">
-                          <div className="dash-widget dash1">
-                            <div className="dash-widgetimg">
-                              <span>
-                                <i className="iconly-Wallet icli sidebar_icons"></i>
-                              </span>
-                            </div>
-                            <div className="dash-widgetcontent">
-                              <h5>
-                                ₹
-                                <span className="counters">
-                                  {this.state.total.toFixed(2)}
-                                </span>
-                              </h5>
-                              <h6>Total</h6>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                      );
+                    })
+                  }
+
+
+                
                   {this.state.data.length > 0 ? (
                     <div className="card">
                       <div className="card-body">
@@ -309,7 +506,8 @@ class Myreport extends Component {
                             next={() => {
                               this.fetch_order(
                                 this.state.page + 1,
-                                this.state.range
+                                this.state.range,
+                                this.state.method
                               );
                               this.setState({
                                 // page: this.state.page + 1,
@@ -330,13 +528,19 @@ class Myreport extends Component {
                               <thead>
                                 <tr>
                                   <th>S.no</th>
-                                  <th>Order ID</th>
-                                  <th>Time</th>
+                                  <th>Date</th>
+                                  {
+                                      this.context.role.stores.length>1 ? <th>Store</th>:null
+                                    }
+                                  <th>Bill No</th>
                                   <th>Amount</th>
+                                  <th>Time</th>
+                                  <th>Staff Name</th>
+                              
                                   <th>Method</th>
                                   <th>Channel</th>
                                   
-                                  <th>Payment TXN Id</th>
+                                  <th>Reference</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -344,22 +548,34 @@ class Myreport extends Component {
                                   return (
                                     <tr>
                                       <td>{index + 1}</td>
+                                      <td> {moment(item.created_at).format('DD-MM-YYYY')}</td>
+                                      <td>{item.shop_name} {'-'} {item.area} </td>
+                                      {/* {
+                                        this.context.role.stores.length>1 ? <td>{item.orders.store.store_name}</td>:null
+                                      } */}
                                       <td
                                         className="cursor-pointer"
                                         onClick={() => {
                                           this.setState({
                                             open: true,
                                             drawerOrderId:
-                                              item.orders.order_code,
+                                              item.order_code,
                                           });
                                         }}
                                       >
-                                        {item.orders.bill_no}
-                                      </td>
-                                      <td>
-                                        {moment(item.created_at).format('lll')}
+                                        {item.bill_no}
                                       </td>
                                       <td>₹{item.txn_amount}</td>
+                                      <td>
+                                        {moment(item.created_at).format('hh:mm A')}
+                                      </td>
+                                      <td>
+                                        {item.staff_name !== null
+                                          ? item.staff_name
+                                          : 'N/A'}
+                                      </td>
+                                   
+
                                       <td>
                                         {item.txn_method === 'upi' ||
                                         item.txn_method === 'UPI'
@@ -375,7 +591,7 @@ class Myreport extends Component {
                                           ? 'Weazy Pay'
                                           : item.txn_method === 'offline-cash'
                                           ? 'Offline Cash'
-                                          : ''}
+                                          : item.txn_method}
                                       </td>
                                       <td
                                         style={{
@@ -387,8 +603,7 @@ class Myreport extends Component {
                                       >
                                         {item.txn_channel}
                                       </td>
-                                     
-                                      <td>{item.payment_txn_id}</td>
+                                      <td>{item.txn_reference === null ? 'N/A' : item.txn_reference}</td>
                                     </tr>
                                   );
                                 })}
@@ -433,4 +648,4 @@ class Myreport extends Component {
   }
 }
 
-export default Myreport;
+export default (props) => <Myreport {...useParams()} {...props} />;

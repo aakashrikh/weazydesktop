@@ -390,25 +390,19 @@ export class UpdateProductRecipe extends React.Component {
       add_category_loading: false,
       is_save_button_loding: false,
       rowsRaw: [
-        {
-          id: 1,
-          name: '',
-          quantity: '',
-          unit: '',
-          material_id: '',
-          area:[]
-        },
       ],
 
       total: 0,
       product_name: '',
       variant_name: '',
+      recepe_loding:true
     };
   }
 
 
 
   fetch_product_recipe = () => {
+
     fetch(api + 'fetch_product_recipe', {
       method: 'POST',
       headers: {
@@ -426,40 +420,50 @@ export class UpdateProductRecipe extends React.Component {
         if (!json.status) {
           var msg = json.msg;
           toast.error(msg);
+          this.setState({ recepe_loding: false });
         } else {
-          if (json.raw_materials.length > 0) {
-            const vari = [];
+            let vari = [];
             if(json.raw_materials.length > 0)
               {
               
-            json.raw_materials.map((item, index) => {
-              var one = {
-                id: item.raw_product_id,
-                name: 'one',
-                quantity: item.raw_product_quantity,
-                unit: item.raw_product_unit,
-                material_id: item.raw_product_id,
-                area:JSON.parse(item.area)
-              };
-              vari.push(one);
-            });
+                json.raw_materials.map((item, index) => {
+                  var one = {
+                    id: item.raw_product_id,
+                    name: 'one',
+                    quantity: item.raw_product_quantity,
+                    unit: item.raw_product_unit,
+                    material_id: item.raw_product_id,
+                    area:item.area
+                  };
+                  vari.push(one);
+                });
 
-            this.setState({ rowsRaw: vari });
+          
+            // alert("Ccww");
           }
           else
           {
-            this.setState({ rowsRaw: [] });
+            vari = [{
+              id: 0,
+              name: 'one',
+              quantity: '',
+              unit: '',
+              material_id: 0,
+              area:['DineIn','Delivery','TakeAway']
+            }];
           }
-          }
+          
+          this.setState({ rowsRaw: vari,product_name: json.product.product_name, }, () => {
+            this.setState({ recepe_loding: false });
+          });
 
           if (json.varient != null) {
             this.setState({ variant_name: json.varient.variants_name });
           }
-          this.setState({
-            // rowsRaw: json.raw_materials,
-            // rowsSemi: json.semi_dishes,
-            product_name: json.product.product_name,
-          });
+          else
+          {
+            this.setState({ variant_name: '' });
+          }
         }
         return json;
       })
@@ -467,7 +471,7 @@ export class UpdateProductRecipe extends React.Component {
         console.error(error);
       })
       .finally(() => {
-        this.setState({ is_loding: false });
+
       });
   };
 
@@ -620,7 +624,7 @@ export class UpdateProductRecipe extends React.Component {
           </Drawer.Title>
         </Drawer.Header>
         <Drawer.Body>
-          {this.state.is_loding ? (
+          {this.state.recepe_loding ? (
             <Loader />
           ) : (
             <div className="card">
@@ -725,7 +729,7 @@ export class UpdateProductRecipe extends React.Component {
                                   onClean={() => {
                                     this.onRemove('',idx);
                                   }}
-                                  defaultValue={this.state.rowsRaw[idx].area}
+                                  value={this.state.rowsRaw[idx].area}
                                 />
                        
                                 </Stack>

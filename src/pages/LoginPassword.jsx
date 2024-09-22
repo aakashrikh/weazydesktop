@@ -1,10 +1,10 @@
 import { Component } from 'react';
 import { Helmet } from 'react-helmet';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams,Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api } from '../../config';
 import { AuthContext } from '../AuthContextProvider';
-import logo from '../assets/images/logos/main_logo_black.png';
+import logo from '../assets/images/logos/main_logo_black2.png';
 import welcome from '../assets/images/welcome.svg';
 
 class LoginPassword extends Component {
@@ -29,7 +29,7 @@ class LoginPassword extends Component {
     }, 0);
   }
 
-  login = () => {
+  login = async  () => {
     var phoneNumber = this.state.phoneNumber;
     let rjx = /^[0]?[6789]\d{9}$/;
     let isValid = rjx.test(phoneNumber);
@@ -39,7 +39,7 @@ class LoginPassword extends Component {
       toast.error('Enter Password!');
     } else {
       this.setState({ sendotploading: true });
-      fetch(api + 'login_by_localpart', {
+      const response = await  fetch(api + 'loginpassword', {
         method: 'POST',
         headers: {
           Accept: 'application/json',
@@ -50,40 +50,63 @@ class LoginPassword extends Component {
           passcode: this.state.password,
           secret: 'ggMjF4waGewcI*7#3F06',
         }),
-      })
-        .then((response) => response.json())
-        .then((json) => {
-          if (json.msg === 'ok') {
-            toast.success('OTP verified successfully');
+      });
 
-            if (json.user_type == 'login') {
-              const data = {
-                token: json.token,
-                vendor_id: json.usr,
-                use_type: 'done',
-              };
-              localStorage.setItem('@auth_login', JSON.stringify(data));
-            } else {
-              const data = {
-                token: json.token,
-                vendor_id: json.usr,
-                use_type: 'steps',
-              };
+      try{
+        const json = await response.json();
+      
+        if (json.status) {
+          toast.success('Password verified successfully');
+          let data; 
+          if (json.user_type == 'login') {
+            var steps = 'done';
+            data = {
+              token: json.token,
+              vendor_id: json.usr,
+              step: 'done',
+            };
+          
+          } else {
+            var steps = 'steps';
+            data = {
+              token: json.token,
+              vendor_id: json.usr,
+              step: 'steps',
+            };
+           
+          }
+
+            json.data.token=json.token;
+
+            if(this.context.isElectron())
+            {
+              const response = await window.electron.saveCredentials('AUTHMAIN', json.data);
+              if (response.status === 'success') {
+                // alert('Credentials saved successfully!');
+                } else {
+                 console.log(response.error);
+               }
+            }
+            else
+            {
               localStorage.setItem('@auth_login', JSON.stringify(data));
             }
 
-            this.context.login('done', json.token);
-            const path = this.props.location.state?.path || '/';
-
-            this.props.navigate(path, { replace: true });
-          } else {
-            toast.error(json.error);
-          }
-        })
-        .catch((error) => console.error(error))
-        .finally(() => {
-          this.setState({ sendotploading: false });
-        });
+          //redirect to dashboard
+          window.location.href = '/';
+        } else {
+          toast.error(json.msg);
+          this.setState({
+            otp: '',
+          });
+        }
+      }
+      catch(error)  {
+        console.error(error);
+      }
+      finally {
+        this.setState({ sendotploading: false });
+      }
     }
   };
 
@@ -95,14 +118,8 @@ class LoginPassword extends Component {
         </Helmet>
         <div className="main-wrapper">
           <div className="account-content">
-            <div className="login-wrapper">
-              <div className="login-img">
-                <h1>We're holding the door for you!</h1>
-                <h3>
-                  Login now and manage all your Weazy Billing services with
-                  ease.
-                </h3>
-              </div>
+            <div className="login-wrapper loginpassword">
+           
               <div className="login-content">
                 <div className="login-userset">
                   <div className="login-logo">
@@ -110,8 +127,8 @@ class LoginPassword extends Component {
                       src={logo}
                       alt="img"
                       style={{
-                        maxWidth: '50%',
-                        margin: '20px auto 40px',
+                        maxWidth: '60%',
+                        margin: '20px auto 10px',
                       }}
                     />
                   </div>
@@ -163,7 +180,7 @@ class LoginPassword extends Component {
                     <label>Password</label>
                     <div className="form-addons mb-3">
                       <input
-                        type="text"
+                        type="password"
                         placeholder="Enter Password"
                         value={this.state.password}
                         onChange={(e) =>
@@ -171,6 +188,7 @@ class LoginPassword extends Component {
                             password: e.target.value,
                           })
                         }
+
                       />
                       <img
                         src="https://img.icons8.com/ios/50/000000/password.png"
@@ -202,6 +220,15 @@ class LoginPassword extends Component {
                       </div>
                     )}
                   </div>
+
+                  <Link to="/login">
+                   <br/> <p
+                      className="forgot-password"
+                      style={{ cursor: 'pointer',fontWeight:'500',textAlign:'center',color:'#0066b2' }}
+                    >
+                     Login with OTP instead
+                    </p>
+                  </Link>
                 </div>
               </div>
             </div>

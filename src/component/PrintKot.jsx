@@ -48,9 +48,9 @@ export class PrintKot extends Component {
             )}
           </p>
 
-          {this.props.order.print_receipt_count > 0 && (
+          {this.props.order.print_kot_count > 0 && (
               <center style={{ textAlign: 'center', fontFamily: 'Roboto, Sans-serif' }}>
-                <h6>Duplicate Receipt</h6>
+                <h6>Duplicate KOT</h6>
               </center>
             )}
             

@@ -58,7 +58,8 @@ class Expense extends Component {
     expense_document: '',
     view_expense:[],
     store:[],
-    store_id:0
+    store_id:0,
+    download_csv: false,
   };
 
   setDate = (e) => {
@@ -189,8 +190,8 @@ class Expense extends Component {
   };
 
   fetch_csv = () => {
-    this.setState({ loading: true });
-    fetch(api + 'fetch_sales_reports', {
+    this.setState({ download_csv: true });
+    fetch(api + 'fetch_expense', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -198,30 +199,30 @@ class Expense extends Component {
         Authorization: this.context.token,
       },
       body: JSON.stringify({
-        page: 1,
+        page:1,
         range: 'custom',
         start_date: this.state.from,
         end_date: this.state.to,
-        method: this.state.method,
-        page_length: 'all',
+    
+        category: this.state.category,
+        page_length:'all',
+        type: this.state.method,
+        staff_id: this.state.staff_id,
+        store: this.state.store
       }),
     })
-      .then((response) => response.json())
-      .then((json) => {
-        if (json.status) {
-          this.setState({ downloaded_data: json.data });
-        } else {
-          this.setState({ downloaded_data: [] });
-        }
-        return json;
-      })
-      .catch((error) => {
-        console.error(error);
-      })
-      .finally(() => {
-        this.setState({ loading: false });
-      });
-  };
+   .then((respose) => respose.blob())
+   .then((blob) => {
+     const url = window.URL.createObjectURL(new Blob([blob]));
+     const link = document.createElement('a');
+     link.href = url;
+     link.setAttribute('download', 'expense_report.csv');
+     document.body.appendChild(link);
+     link.click();
+     this.setState({download_csv: false});
+   });
+ };
+
 
 
   uploadImage = async (e) => {
@@ -306,7 +307,7 @@ class Expense extends Component {
     const data = this.context.role.stores.map((item, index) => (
       
       {
-      label: item.shop_name == null ? 'N/A' : item.shop_name,
+      label: item.shop_name == null ? 'N/A' : item.shop_name + '-' + item.area,
       value: item.vendor_uu_id,
     }));
 
@@ -477,7 +478,7 @@ class Expense extends Component {
                 this.context.role.stores.length>1 && 
                 
             <li className="nav-item">
-                     <label>Select Store</label>
+                     <label>Select Outlet</label>
                          {/* <br/> */}
                           <CheckPicker
                             data={data}
@@ -540,15 +541,32 @@ class Expense extends Component {
                           </button>
                         </li>
                       </ul>
-                      <CSVLink
-                        data={this.state.downloaded_data}
-                        filename={'Transactions Report.csv'}
-                        className="btn btn-secondary"
-                        style={{ marginTop: '20px' }}
-                        target="_blank"
+                     
+
+                      {
+                        !this.state.download_csv ? <button
+                          className="btn btn-secondary"
+                          onClick={() => {
+                            this.fetch_csv();
+                          }}
+                        >
+                          {this.state.loading ? 'Loading csv...' : 'Download CSV'}
+                        </button> : //show loading button
+                        <button
+                        className="btn btn-secondary btn-sm w-120"
+                        disabled
                       >
-                        {this.state.loading ? 'Loading csv...' : 'Download CSV'}
-                      </CSVLink>
+                        <i
+                          className="fa-regular fa-circle-down"
+                          style={{
+                            fontSize: 18,
+                            marginRight: 10,
+                          }}
+                        ></i>
+                        Downloading
+                      </button>
+                      }
+
                     </div>
                   </div>
                 </section>

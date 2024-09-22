@@ -54,6 +54,8 @@ export class Productreport extends Component {
       item_id: '',
       variant_id: '',
       download_csv: false,
+      order_type: 'All',
+      download_csv: false,
     };
   }
 
@@ -130,6 +132,7 @@ export class Productreport extends Component {
         categories: this.state.category,
         is_veg: this.state.is_veg,
         page_length: this.state.itemsPerPage,
+        // order_type: this.state.order_type,
         sort: this.state.sort,
       }),
     })
@@ -188,6 +191,7 @@ export class Productreport extends Component {
         categories: this.state.category,
         is_veg: this.state.is_veg,
         page_length: 'all',
+        order_type: this.state.order_type,
         sort: this.state.sort,
       }),
     })
@@ -332,8 +336,29 @@ export class Productreport extends Component {
                           />
                         </li>
 
+                      
+
                         <li className="nav-item">
-                          <label>Select type</label>
+                          <label>Order Type</label>
+                          <select
+                            className="form-control"
+                            onChange={(e) => {
+                              this.setState({
+                                order_type: e.target.value,
+                              });
+                            }}
+                            style={{ width: '150px', marginRight: '10px' }}
+                            // className="select-container"
+                          >
+                            <option value={'All'}>All</option>
+                            <option value={'Dine-in'}>Dine IN</option>
+                            <option value={'TakeAway'}>TakeAway</option>
+                            <option value={'Delivery'}>Delivery</option>
+                          </select>
+                        </li>
+
+                        <li className="nav-item">
+                          <label>Product type</label>
                           <select
                             className="form-control"
                             onChange={(e) => {
@@ -439,18 +464,16 @@ export class Productreport extends Component {
                             <thead>
                               <tr>
                                 <th>S.no</th>
+                                <th>Product Code</th>
                                 <th>Product Name</th>
-                              
-                            
+                                <th>Order Type</th>
                                 <th>Orders</th>
-                                <th>Avg Sales Count</th>
+                                <th>Avg Order</th>
                                 <th>Quantity</th>
                                 <th>Rate</th>
-                       
                                 <th>Discount</th>
                                 <th>Net Amount</th>
                                 <th>Tax</th>
-                               
                                 <th>Total</th>
                                 <th>Complimentry</th>
                               </tr>
@@ -460,6 +483,7 @@ export class Productreport extends Component {
                                 return (
                                   <tr>
                                     <td>{index + 1}</td>
+                                    <td>{item.product_code}</td>
                                     <td>
                                     {item.is_veg ? (
                                               <img src={veg} alt="veg" />
@@ -486,7 +510,9 @@ export class Productreport extends Component {
                                       )}
                                     </td> */}
                                     
-                                   
+                                   <td>
+                                      {item.order_type}
+                                   </td>
                                     <td
                                      onClick={() => {
                                       this.setState({
@@ -673,6 +699,7 @@ export class ItemOrder extends React.Component {
             }
           }
         }
+        
         return json;
       })
       .catch((error) => {

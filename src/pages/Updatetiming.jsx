@@ -165,7 +165,7 @@ export class Updatetiming extends Component {
             <div className="content">
               <div className="page-header">
                 <div className="page-title">
-                  <h4>Store Timings</h4>
+                  <h4>Outlet Timings</h4>
                 </div>
 
                 <div className="page-btn">
@@ -190,7 +190,7 @@ export class Updatetiming extends Component {
                       }}
                       className="btn btn-secondary btn-sm me-2"
                     >
-                      Update Store Timings
+                      Update  Timings
                     </a>
                   )}
                 </div>

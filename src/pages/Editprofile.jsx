@@ -31,6 +31,7 @@ export class Editprofile extends Component {
       business_contact: '',
       fssai_number: '',
       address:'',
+      area:'',
       open: false,
       add_franchise_name: '',
       add_franchise_address: '',
@@ -155,7 +156,8 @@ export class Editprofile extends Component {
             profile_pic: json.data[0].profile_pic,
             business_contact: json.data[0].business_contact,
             fssai_number: json.data[0].fssai_number,
-            address: json.data[0].address
+            address: json.data[0].address,
+            area: json.data[0].area,
           });
         } else {
           toast.error(json.message);
@@ -194,7 +196,8 @@ export class Editprofile extends Component {
           name: this.state.name,
           business_contact: this.state.business_contact,
           fssai_number: this.state.fssai_number,
-          address: this.state.address
+          address: this.state.address,
+          area: this.state.area,
         }),
       })
         .then((response) => response.json())
@@ -264,7 +267,7 @@ export class Editprofile extends Component {
             <div className="content">
               <div className="page-header">
                 <div className="page-title">
-                  <h4>Profile</h4>
+                  <h4>Outlet Profile</h4>
                 </div>
 
                 <div className="page-btn d-flex align-items-center">
@@ -302,7 +305,7 @@ export class Editprofile extends Component {
                       <div className="col-lg-12 col-sm-12">
                         <div className="page-header">
                           <div className="page-title">
-                            <h4>Store logo</h4>
+                            <h4>Outlet logo</h4>
                           </div>
                         </div>
                       </div>
@@ -377,14 +380,15 @@ export class Editprofile extends Component {
                             Please Wait...
                           </button>
                         ) : (
-                          <a
+                         <> &nbsp; &nbsp; &nbsp;<a
                             onClick={() => {
                               this.upload_image();
                             }}
                             className="btn btn-secondary btn-sm me-2"
                           >
-                            Update Store Logo
+                            Update  Logo
                           </a>
+                          </>
                         )}
                       </div>
                     </div>
@@ -395,16 +399,16 @@ export class Editprofile extends Component {
                         <div className="col-lg-12 col-sm-12">
                           <div className="page-header">
                             <div className="page-title">
-                              <h4>Edit Profile</h4>
+                              <h4>Outlet Profile</h4>
                             </div>
                           </div>
                         </div>
                         <div className="col-lg-6 col-sm-12">
                           <div className="form-group">
-                            <label>Name</label>
+                            <label>Owner Name</label>
                             <input
                               type="text"
-                              placeholder="Name"
+                              placeholder="Owner Name"
                               value={this.state.name}
                               onChange={(e) => {
                                 this.setState({
@@ -416,10 +420,10 @@ export class Editprofile extends Component {
                         </div>
                         <div className="col-lg-6 col-sm-12">
                           <div className="form-group">
-                            <label>Shop Name</label>
+                            <label>Outlet Name</label>
                             <input
                               type="text"
-                              placeholder="Shop Name"
+                              placeholder="Outlet Name"
                               value={this.state.shop_name}
                               onChange={(e) => {
                                 this.setState({
@@ -431,13 +435,45 @@ export class Editprofile extends Component {
                         </div>
                         <div className="col-lg-6 col-sm-12">
                           <div className="form-group">
-                            <label>Contact</label>
+                            <label>Outlet Area</label>
+                            <input
+                              type="text"
+                              placeholder="Outlet area"
+                              value={this.state.area}
+                              onChange={(e) => {
+                                this.setState({
+                                  area: e.target.value,
+                                });
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="col-lg-6 col-sm-12">
+                          <div className="form-group">
+                            <label>Registered Contact</label>
                             <input
                               type="text"
                               placeholder="Contact"
                               value={this.state.contact}
                               disabled
                               readOnly
+                            />
+                          </div>
+                        </div>
+                        <div className="col-lg-6 col-sm-12">
+                          <div className="form-group">
+                            <label>Outlet Contact(Optional)</label>
+                            <input
+                              type="text"
+                              placeholder="Outlet Contact"
+                              maxLength="10"
+                              value={this.state.business_contact}
+                              onChange={(e) => {
+                                this.setState({
+                                  business_contact: e.target.value,
+                                });
+                              }}
                             />
                           </div>
                         </div>
@@ -456,6 +492,7 @@ export class Editprofile extends Component {
                             />
                           </div>
                         </div>
+                        
                         <div className="col-lg-6 col-sm-12">
                           <div className="form-group">
                             <label>Website (Optional)</label>
@@ -473,7 +510,7 @@ export class Editprofile extends Component {
                         </div>
                         <div className="col-lg-6 col-sm-12">
                           <div className="form-group">
-                            <label>Shop Description</label>
+                            <label>Outlet Description</label>
                             <input
                               type="text"
                               placeholder="Description"
@@ -501,22 +538,7 @@ export class Editprofile extends Component {
                             />
                           </div>
                         </div>
-                        <div className="col-lg-6 col-sm-12">
-                          <div className="form-group">
-                            <label>Business Contact(Optional)</label>
-                            <input
-                              type="text"
-                              placeholder="Business Contact"
-                              maxLength="10"
-                              value={this.state.business_contact}
-                              onChange={(e) => {
-                                this.setState({
-                                  business_contact: e.target.value,
-                                });
-                              }}
-                            />
-                          </div>
-                        </div>
+                       
 
                         <div className="col-lg-6 col-sm-12">
                           <div className="form-group">
@@ -566,7 +588,7 @@ export class Editprofile extends Component {
                                 <input
                                   type="text"
                                   placeholder="Address"
-                                  value={this.state.data.address}
+                                  value={this.state.address}
                                   onChange={(e) => {
                                     this.setState({
                                       address: e.target.value,
@@ -600,7 +622,7 @@ export class Editprofile extends Component {
                               }}
                               className="btn btn-secondary btn-sm me-2"
                             >
-                              Submit
+                              Update Profile
                             </a>
                           )}
                         </div>

@@ -15,7 +15,7 @@ import Topnav from '../othercomponent/Topnav';
 import PerUserOrder from './PerUserOrder';
 import { Link } from 'react-router-dom';
 
-export class Salesreport extends Component {
+export class Cancellationreport extends Component {
   static contextType = AuthContext;
   state = {
     data: [],
@@ -28,6 +28,7 @@ export class Salesreport extends Component {
     type: 'all',
     channel: 'all',
     total: 0.0,
+    bills:0,
     discount: 0.0,
     itemsPerPage: 50,
     downloaded_data: [],
@@ -48,7 +49,7 @@ export class Salesreport extends Component {
     },
     store:[],
     store_id:0,
-    download_csv:false
+    download_csv: false,
   };
 
   setDate = (e) => {
@@ -60,10 +61,12 @@ export class Salesreport extends Component {
       window.scrollTo(0, 0);
     }, 0);
     this.fetch_order(1, this.state.itemsPerPage);
+
+
   }
 
   fetch_order = (page_id) => {
-    fetch(api + 'fetch_order_reports', {
+    fetch(api + 'fetch_cancellation_reports', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -77,7 +80,7 @@ export class Salesreport extends Component {
         range: 'custom',
         type: this.state.type,
         channel: this.state.channel,
-        discount_filter: this.state.discount_filter,
+        // discount_filter: this.state.discount_filter,
         page_length: this.state.itemsPerPage,
         store:this.state.store
       }),
@@ -90,6 +93,7 @@ export class Salesreport extends Component {
             this.setState({
               data: [],
               total: 0,
+              bills:0,
               discount: 0,
               tax: 0,
               unsettle: 0,
@@ -110,6 +114,7 @@ export class Salesreport extends Component {
             this.setState({
               data: json.data.data,
               total: json.total,
+              bills:json.bills,
               discount: json.total_discount,
               tax: json.tax,
               unsettle: json.unsattle,
@@ -139,9 +144,9 @@ export class Salesreport extends Component {
       });
   };
 
-  fetch_csv = () => {
+   fetch_csv = () => {
     this.setState({ download_csv: true });
-    fetch(api + 'fetch_order_reports', {
+    fetch(api + 'fetch_cancellation_reports', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -155,7 +160,7 @@ export class Salesreport extends Component {
         range: 'custom',
         type: this.state.type,
         channel: this.state.channel,
-        discount_filter: this.state.discount_filter,
+        // discount_filter: this.state.discount_filter,
         page_length: 'all',
         store:this.state.store
       }),
@@ -165,7 +170,7 @@ export class Salesreport extends Component {
      const url = window.URL.createObjectURL(new Blob([blob]));
      const link = document.createElement('a');
      link.href = url;
-     link.setAttribute('download', 'sales_report.csv');
+     link.setAttribute('download', 'cancellation_report.csv');
      document.body.appendChild(link);
      link.click();
      this.setState({download_csv: false});
@@ -196,11 +201,10 @@ export class Salesreport extends Component {
   };
 
   render() {
-
     const data = this.context.role.stores.map((item, index) => (
       
       {
-      label: item.shop_name == null ? 'N/A' : item.shop_name + '-' + item.area,
+      label: item.shop_name == null ? 'N/A' : item.shop_name + '-' + item.area ,
       value: item.vendor_uu_id,
     }));
 
@@ -208,7 +212,7 @@ export class Salesreport extends Component {
     return (
       <>
         <Helmet>
-          <title>Sales Report</title>
+          <title>Cancellation Report</title>
         </Helmet>
         <div className="main-wrapper">
           <Header sidebar={true} />
@@ -216,7 +220,7 @@ export class Salesreport extends Component {
             <div className="content">
               <div className="page-header">
                 <div className="page-title">
-                  <h4>Sales Report</h4>
+                  <h4>Cancellation Report</h4>
                 </div>
               </div>
 
@@ -349,17 +353,15 @@ export class Salesreport extends Component {
                             // className="select-container"
                           >
                             <option value={'all'}>All</option>
-                            <option value={'discount'}>Discounted</option>
-                            <option value={'nodiscount'}>No Discount</option>
+                            <option value={'foc'}>FOC</option>
                           </select>
                         </li>
                         <li>
                         {
                 this.context.role.stores.length>1 && 
             <li className="nav-item">
-                <label>Outlets</label>
-                <br/>
-                    
+                        <label>Outlets</label>
+                        <br/>
                           <CheckPicker
                             data={data}
                             style={{ width: '250px' }}
@@ -390,7 +392,7 @@ export class Salesreport extends Component {
                             onClick={() => {
                               this.setState({ is_loading: true });
                               this.fetch_order(1, '');
-                      
+                           
                             }}
                           >
                             Search
@@ -430,7 +432,7 @@ export class Salesreport extends Component {
                     <>
                       <div className="dashboard-status-card">
                         <div className="row w-100">
-                          <div className="col-lg-3 col-sm-3 col-12">
+                        <div className="col-lg-3 col-sm-3 col-12">
                             <div className="dash-widget dash1">
                               <div className="dash-widgetimg">
                                 <span>
@@ -439,34 +441,16 @@ export class Salesreport extends Component {
                               </div>
                               <div className="dash-widgetcontent">
                                 <h5>
-                                  ₹
+                                  
                                   <span className="counters">
-                                    {this.state.total.toFixed(2)}
+                                    {" " + this.state.bills}
                                   </span>
                                 </h5>
-                                <h6>Gross Sales</h6>
+                                <h6>Bills</h6>
                               </div>
                             </div>
                           </div>
 
-                          <div className="col-lg-3 col-sm-3 col-12">
-                            <div className="dash-widget dash1">
-                              <div className="dash-widgetimg">
-                                <span>
-                                  <i className="iconly-Wallet icli sidebar_icons"></i>
-                                </span>
-                              </div>
-                              <div className="dash-widgetcontent">
-                                <h5>
-                                  ₹
-                                  <span className="counters">
-                                    {this.state.discount.toFixed(2)}
-                                  </span>
-                                </h5>
-                                <h6>Discount</h6>
-                              </div>
-                            </div>
-                          </div>
 
                           <div className="col-lg-3 col-sm-3 col-12">
                             <div className="dash-widget dash1">
@@ -479,133 +463,18 @@ export class Salesreport extends Component {
                                 <h5>
                                   ₹
                                   <span className="counters">
-                                    {this.state.tax.toFixed(2)}
+                                    {" " + this.state.total.toFixed(2)}
                                   </span>
                                 </h5>
-                                <h6>Tax</h6>
+                                <h6>Amount</h6>
                               </div>
                             </div>
                           </div>
 
-                          <div className="col-lg-3 col-sm-3 col-12">
-                            <div className="dash-widget dash1">
-                              <div className="dash-widgetimg">
-                                <span>
-                                  <i className="iconly-Wallet icli sidebar_icons"></i>
-                                </span>
-                              </div>
-                              <div className="dash-widgetcontent">
-                                <h5>
-                                 <span className="counters">
-                                  {(this.state.total.toFixed(2)-this.state.tax.toFixed(2))}
-                                  </span>
-                                </h5>
-                                <h6>Net Sales</h6>
-                              </div>
-                            </div>
-                          </div>
-
-
-                          <div className="col-lg-3 col-sm-3 col-12">
-                  
-                              <div className="dash-widget">
-                                <div className="dash-widgetimg">
-                                  <span>
-                                    <i className="iconly-Bag icli sidebar_icons"></i>
-                                  </span>
-                                </div>
-                                <div className="dash-widgetcontent">
-                                  <h6>Total Bills</h6>
-                                  <h5>
-                                    {this.state.isloading ? (
-                                      <Skeletonloader height={23} count={1} />
-                                    ) : (
-                                      <span className="counters">
-                                        {
-                                          this.state.order.total
-                                        }
-                                      </span>
-                                    )}
-                                  </h5>
-                                </div>
-                              </div>
-                    
-                          </div>
-                          <div className="col-lg-3 col-sm-3 col-12">
-                 
-                              <div className="dash-widget dash1">
-                                <div className="dash-widgetimg">
-                                  <span>
-                                    <i className="iconly-Bag icli sidebar_icons"></i>
-                                  </span>
-                                </div>
-                                <div className="dash-widgetcontent">
-                                  <h6>Completed Orders</h6>
-                                  <h5>
-                                    {this.state.isloading ? (
-                                      <Skeletonloader height={23} count={1} />
-                                    ) : (
-                                      <>
-                                        
-                                        <span className="counters">
-                                        {
-                                          this.state.order.completed
-                                        }
-                                        </span>
-                                      </>
-                                    )}
-                                  </h5>
-                                </div>
-                              </div>
                       
-                          </div>
-                          <div className="col-lg-3 col-sm-3 col-12">
-                           <Link to="/orderlist/cancelled">
-                              <div className="dash-widget dash4">
-                                <div className="dash-widgetimg">
-                                  <span>
-                                    <span className="ps-menu-icon css-5rih0l">
-                                      <i className="iconly-Bag icli sidebar_icons"></i>
-                                    </span>
-                                  </span>
-                                </div>
-                                <div className="dash-widgetcontent">
-                                  <h6>Cancelled Bills</h6>
-                                  <h5>
-                                    {this.state.isloading ? (
-                                      <Skeletonloader height={23} count={1} />
-                                    ) : (
-                                      <span className="counters">
-                                        {
-                                          this.state.order.cancelled
-                                        }
-                                      </span>
-                                    )}
-                                  </h5>
-                                </div>
-                              </div>
-                              </Link>
-                   
-                          </div>
-                          <div className="col-lg-3 col-sm-3 col-12">
-                          <Link to="/orderlist/unsettled">
-                            <div className="dash-widget dash1">
-                              <div className="dash-widgetimg">
-                                <span>
-                                  <i className="iconly-Wallet icli sidebar_icons"></i>
-                                </span>
-                              </div>
-                              <div className="dash-widgetcontent">
-                                <h5>
-                                 <span className="counters">
-                                  {this.state.unsettle_order}/₹ {this.state.unsettle.toFixed(2)}
-                                  </span>
-                                </h5>
-                                <h6>Unsettled Bills</h6>
-                              </div>
-                            </div>
-                            </Link>
-                          </div>
+                          
+
+                        
                         </div>
                       </div>
                       <div className="card">
@@ -640,19 +509,17 @@ export class Salesreport extends Component {
                                       this.context.role.stores.length>1 ? <th>Outlet</th>:null
                                     }
                                     <th>Bill No</th>
-                                    <th>Customer</th>
-                            
-                                    <th>Time</th>
-                                    <th>Amount</th>
-                                    <th>Discount</th>
-                                    <th>Other</th>
-                                    <th>Tax</th>
-                               
-                                    {/* <th>Other</th> */}
-                                    <th>Total </th>
+                                    <th>Cancellation Amount</th>
                                     <th>Source</th>
                                     <th>Order Type</th>
-                                    <th>Order Status</th>
+                                    <th>Time</th>
+                                    <th>Customer</th>
+                                    <th>Contact</th>
+                                    <th>Given By</th>
+                                    <th>Approved By</th>
+                                    <th>Remarks</th>
+                                    
+                                
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -660,13 +527,11 @@ export class Salesreport extends Component {
                                     return (
                                       <tr key={index}>
                                         <td>{index + 1}</td>
-                                        <td>
-                                          {moment(item.created_at).format(
+                                        <td>  {moment(item.created_at).format(
                                             'DD-MM-YYYY'
-                                          )}
-                                        </td>
+                                          )}</td>
                                         {
-                                          this.context.role.stores.length>1 ? <td>{item.vendor.shop_name}</td>:null
+                                          this.context.role.stores.length>1 ? <td>{item.vendor.shop_name} - {item.vendor.area}</td>:null
                                         }
                                         <td
                                           onClick={() => {
@@ -678,6 +543,19 @@ export class Salesreport extends Component {
                                           className="cursor-pointer"
                                         >
                                           {item.bill_no}
+                                        </td>
+                                        <td>{item.total_amount}</td>
+                                        <td>{item.channel}</td>
+                                        <td>
+                                          {item.order_type != 'TakeAway' &&
+                                          item.order_type != 'Delivery'
+                                            ? 'Dine In'
+                                            : item.order_type}
+                                        </td>
+                                        <td>
+                                        {moment(item.created_at).format(
+                                            'hh:mm A'
+                                          )}
                                         </td>
                                         {/* <td>
                                           <Link
@@ -705,96 +583,36 @@ export class Salesreport extends Component {
                                             ? 'N/A'
                                             : item.user.name}
                                         </td>
-                                        <td>
-                                          {moment(item.created_at).format(
-                                            'hh:mm A'
-                                          )}
+                                        <td
+                                          onClick={() => {
+                                            this.setState({
+                                              openPerUserOrder: true,
+                                              user_id: item.user.user_uu_id,
+                                            });
+                                          }}
+                                          className="cursor-pointer"
+                                        >
+                                          {item.user.name === null
+                                            ? 'N/A'
+                                            : item.user.contact}
                                         </td>
-                                        <td> {item.order_amount}</td>
-                                      
-                                        <td> {item.order_discount}</td>
-                                        <td> {item.charge_amount}</td>
-                                        <td> {item.sgst+item.cgst}</td>
+                                        
+
+                                        
+
+                                    
+                                       
                                 
                                         {/* <td>₹ {item.order_charges}</td> */}
-                                        <td>{item.total_amount}</td>
-                                        <td>{item.channel}</td>
-                                        <td>
-                                          {item.order_type != 'TakeAway' &&
-                                          item.order_type != 'Delivery'
-                                            ? 'Dine In'
-                                            : item.order_type}
-                                        </td>
-
-                                        <td>
-                                          {item.order_status == 'placed' ? (
-                                            <span
-                                              style={{
-                                                color: '#619DD1',
-                                                textTransform: 'capitalize',
-                                              }}
-                                            >
-                                              {item.order_status}
-                                            </span>
-                                          ) : item.order_status == 'ongoing' ? (
-                                            <span
-                                              style={{
-                                                color: '#619DD1',
-                                                textTransform: 'capitalize',
-                                              }}
-                                            >
-                                              {item.order_status}
-                                            </span>
-                                          ) : item.order_status ==
-                                            'processed' ? (
-                                            <span
-                                              style={{
-                                                color: '#619DD1',
-                                                textTransform: 'capitalize',
-                                              }}
-                                            >
-                                              {item.order_status}
-                                            </span>
-                                          ) : item.order_status ==
-                                            'completed' ? (
-                                            <span
-                                              style={{
-                                                color: 'green',
-                                                textTransform: 'capitalize',
-                                              }}
-                                            >
-                                              {item.order_status}
-                                            </span>
-                                          ) : item.order_status ==
-                                            'complated' ? (
-                                            <span
-                                              style={{
-                                                color: 'green',
-                                                textTransform: 'capitalize',
-                                              }}
-                                            >
-                                              Completed
-                                            </span>
-                                          ) : item.order_status ==
-                                            'in_process' ? (
-                                            <span
-                                              style={{
-                                                color: '#0066b2',
-                                                textTransform: 'capitalize',
-                                              }}
-                                            >
-                                              In-Process
-                                            </span>
-                                          ) : (
-                                            <span
-                                              style={{
-                                                color: 'red',
-                                                textTransform: 'capitalize',
-                                              }}
-                                            >
-                                              {item.order_status}
-                                            </span>
-                                          )}
+                              
+                                      
+                                        <td>{item.request_staff_name == null ? 'N/A' : item.request_staff_name}</td>
+                                        
+                                    
+                                            <td>{item.approval_name == null ? 'N/A' : item.approval_name}</td>
+                                            {/* <td>ss</td> */}
+                                            <td>
+                                          {item.cancellation_reason}
                                         </td>
                                       </tr>
                                     );
@@ -848,4 +666,4 @@ export class Salesreport extends Component {
   }
 }
 
-export default Salesreport;
+export default Cancellationreport;
