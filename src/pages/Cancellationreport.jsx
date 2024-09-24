@@ -337,6 +337,8 @@ export class Cancellationreport extends Component {
                             <option value={'pos'}>POS</option>
                             <option value={'website'}>QR Scan</option>
                             <option value={'online'}>Online</option>
+                            <option value={'swiggy'}>Swiggy</option>
+                            <option value={'zomato'}>Zomato</option>
                           </select>
                         </li>
 

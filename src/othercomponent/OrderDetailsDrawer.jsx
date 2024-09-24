@@ -125,6 +125,31 @@ this.printkot = createRef();
         this.handlePrintClick('kot');
       }
 
+      handlePrint = (type) => {
+
+        if(type == 'receipt' || type == 'both')
+        {
+          const contentToPrint = this.PrintRecipt.current.innerHTML;
+          window.electron.send('print', contentToPrint);
+        }
+    
+        if(type == 'kot' || type == 'both')
+          {
+            const contentToPrint = this.printkot.current.innerHTML;
+            window.electron.send('print', contentToPrint);
+          }
+        
+        // const contentToPrint2 = this.printkot.current.innerHTML;
+        
+        // alert(contentToPrint);
+        // Send the captured HTML content to the main process for printing
+       
+        
+    
+        // Use the exposed API from preload.js
+        // window.electron.send('print');
+      }
+
       
   change_order_status = (status) => {
     var cancellation_reason = '';
@@ -157,7 +182,7 @@ this.printkot = createRef();
         order_id: this.state.data.order_code,
         status: status,
         cancellation_reason: cancellation_reason,
-        prepare_time: this.state.time,
+        prepare_time: this.context.user.estimated_preparation_time,
         rider_id: this.state.rider_id,
       }),
     })
@@ -170,11 +195,50 @@ this.printkot = createRef();
           this.setState({
             open: false,
           });
-          this.getOrderDetails(this.props.drawerOrderId);
+         // this.getOrderDetails(this.props.drawerOrderId);
           this.setState({
             cancelModal: false,
             rider_model: false,
           });
+
+          if(status == 'in_process')
+          {
+            if(this.context.isElectron())
+              {
+                if(json.data[0].table == null)
+                  {
+                    this.handlePrint("both");
+                  }
+                  else
+                  {
+                    this.handlePrint("kot");
+                  }
+              }
+          }
+          
+
+          this.setState({
+            data: json.data[0],
+            order_remark: json.data[0].order_remark,
+            vendor_details: json.data[0].vendor,
+            user: json.data[0].user,
+            cart: json.data[0].cart,
+            transaction_details: json.data[0].transactions,
+            isLoading: false,
+
+            print_receipt: json.data[0].order_for,
+          });
+
+          if (json.data[0].delivery != null) {
+            this.setState({
+              delivery: JSON.parse(
+                json.data[0].delivery.shipping_address,
+                null,
+                2
+              ),
+            });
+          }
+
           toast.success('Order Status Updated Successfully');
         }
         return json;
@@ -1402,7 +1466,7 @@ this.printkot = createRef();
                             <a
                               className="btn btn-secondary w-100 ms-2"
                               onClick={() => {
-                                this.change_order_status('confirmed');
+                                this.change_order_status('in_process');
                               }}
                             >
                               <p>Accept Order</p>
@@ -1626,7 +1690,7 @@ this.printkot = createRef();
                           <div className="d-flex align-items-center justify-content-center flex-wrap">
                             
                             <>
-                              {this.state.data.order_type !== 'TakeAway' ? (
+                              {this.state.data.table != null ? (
                                 this.state.print_receipt == 'gen_receipt' ? (
                                   ((this.context.role.staff_role == 'staff' && this.state.data.print_receipt_count >0) || this.context.role.staff_role != 'staff') &&
                                   <>

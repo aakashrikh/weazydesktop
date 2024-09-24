@@ -74,6 +74,8 @@ app.whenReady().then(() => {
     try {
       const printWindow = new BrowserWindow({
         show: false,
+        // height: 600,
+        // width: 800,
       });
 
       printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`

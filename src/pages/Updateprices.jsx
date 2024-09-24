@@ -353,25 +353,21 @@ export class Updateprices extends Component {
                               hasChildren={true}
                               dataLength={this.state.data.length}
                               next={() => {
-                                this.fetchProducts(
-                                  this.state.active_cat,
-                                  this.state.type,
-                                  this.state.page + 1
-                                );
-                                this.setState({
-                                  // page: this.state.page + 1,
-                                  loadMore: true,
-                                });
+                                // this.fetchProducts(
+                                //   this.state.active_cat,
+                                //   this.state.type,
+                                //   this.state.page + 1
+                                // );
+                                // this.setState({
+                                //   // page: this.state.page + 1,
+                                //   loadMore: true,
+                                // });
                               }}
                               hasMore={
                                 this.state.next_page !== null &&
                                 this.state.data.length > 0
                               }
-                              loader={
-                                <div className="d-flex align-items-center justify-content-center w-full mt-xl">
-                                  <InfiniteLoader />
-                                </div>
-                              }
+                             
                             >
 
 {this.renderTable()}

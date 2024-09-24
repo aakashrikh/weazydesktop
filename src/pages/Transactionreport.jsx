@@ -324,12 +324,8 @@ class Transactionreport extends Component {
                             <option value="upi">UPI</option>
                             <option value="card">Debit/Credit Card</option>
                             <option value="online">Weazy Pay</option>
-                            <option value="Swiggy Dine In">
-                              Swiggy Dine In
-                            </option>
-                            <option value="Zomato Dine In">
-                              Zomato Dine In
-                            </option>
+                            <option value={'swiggy'}>Swiggy</option>
+                            <option value={'zomato'}>Zomato</option>
                             <option value="Eazy Diner">Eazy Diner</option>
                             <option value="Paytm">Paytm</option>
                             <option value="PhonePe">PhonePe</option>

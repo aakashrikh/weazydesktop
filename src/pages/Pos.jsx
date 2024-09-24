@@ -167,7 +167,8 @@ class Pos extends Component {
 
   componentDidMount() {
 
-    if (!this.context.role.is_billing_enabled || !this.context.user.is_billing_enabled){
+    // alert(this.context.role.is_billing_enabled);
+    if (!this.context.role.is_billing_enabled || !this.context.user.is_billing_enable){
       if (
         this.context.role.staff_role != 'owner' &&
         this.context.role.staff_role != 'admin'

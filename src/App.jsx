@@ -1,6 +1,6 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
-import React, { Component } from 'react';
+import React, { Component,createRef } from 'react';
 import OneSignal from 'react-onesignal';
 import {
   Route,
@@ -93,6 +93,8 @@ import TransactionNumber from './pages/TransactionNumber.jsx';
 import Expense from './pages/Expense.jsx';
 import StockAdjustment from './pages/StockAdjustment.jsx';
 import Updateprices from './pages/Updateprices.jsx';
+import PrintKot from './component/PrintKot';
+import PrintReceipt2 from './component/PrintReceipt2';
 OneSignal.init({ appId: '49e49fa7-d31e-42d9-b1d5-536c4d3758cc' });
 
 export class App extends Component {
@@ -110,8 +112,12 @@ export class App extends Component {
       width: window.innerWidth,
       products: [],
       category: [],
-      is_enterprise:false
+      is_enterprise:false,
+      order:[]
     };
+
+    this.printkot = createRef();
+    this.PrintRecipt= createRef();
   }
 
   isElectron = () =>
@@ -287,11 +293,103 @@ export class App extends Component {
           src: ['notification.mp3'],
           html5: true,
         });
+
+        if(e.orders.msg.action == 'new_order'){
+          console.log(e.orders.msg.desc);
+         if(this.isElectron())
+          {
+            this.auto_accept_order(e.orders.msg.desc);
+          }
+         
+          Dashboard.orderupdate(e.orders.msg.title);
+         
+          }
+
+        console.log(e.orders);
         sound.play();
-        Dashboard.orderupdate(e.orders.msg.title);
+       
       }
     );
   };
+
+
+  handlePrint = (type) => {
+
+    if(type == 'receipt' || type == 'both')
+    {
+      const contentToPrint = this.PrintRecipt.current.innerHTML;
+      window.electron.send('print', contentToPrint);
+    }
+
+    if(type == 'kot' || type == 'both')
+      {
+        const contentToPrint = this.printkot.current.innerHTML;
+        window.electron.send('print', contentToPrint);
+      }
+    
+    // const contentToPrint2 = this.printkot.current.innerHTML;
+    
+    // alert(contentToPrint);
+    // Send the captured HTML content to the main process for printing
+   
+    
+
+    // Use the exposed API from preload.js
+    // window.electron.send('print');
+  }
+
+
+  auto_accept_order = (order_code) => {
+    
+    this.setState({ mark_complete_buttonLoading: true });
+    fetch(api + 'vendor_auto_accept_order', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: this.state.token,
+      },
+      body: JSON.stringify({
+        order_id: order_code,
+        status: 'in_process',
+        prepare_time: this.state.user.estimated_preparation_time,
+      }),
+    })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!json.status) {
+          var msg = json.msg;
+          toast.error(msg);
+        } else {
+        
+          this.setState({
+            order:json.data
+          },()=>{
+            if(this.isElectron())
+              {
+                if(json.data[0].table == null)
+                  {
+                    this.handlePrint("both");
+                  }
+                  else
+                  {
+                    this.handlePrint("kot");
+                  }
+              } 
+          })
+         
+        }
+        return json;
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {
+        this.setState({ mark_complete_buttonLoading: false });
+      });
+  };
+
+
 
   get_profile = (token) => {
     fetch(api + 'get_vendor_profile', {
@@ -364,6 +462,29 @@ export class App extends Component {
       </Routes>
     ) : (
       <>
+       {this.state.order.length > 0 && (
+            <div
+              style={{
+                display: 'none',
+              }}
+            >
+              <div ref={this.printkot}>
+              <PrintKot
+                ref={(el) => (this.componentRef = el)}
+                order={this.state.order[0]}
+                kot={this.state.kot_id}
+              />
+              </div>
+              <div ref={this.PrintRecipt}>
+              <PrintReceipt2
+                ref={(el2) => (this.componentRef2 = el2)}
+                order={this.state.order[0]}
+                user={this.state.user}
+              />
+              </div>
+            </div>
+          )}
+
         <AuthContext.Provider
           value={{
             login: this.login,

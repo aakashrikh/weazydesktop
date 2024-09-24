@@ -1029,6 +1029,7 @@ class OngoingOrders extends Component {
   }
 
   componentDidMount() {
+    this.fetch_order(1);
     this.timerID = setInterval(() => {
       this.fetch_order(1);
      
@@ -1047,6 +1048,7 @@ class OngoingOrders extends Component {
 
 
    fetch_order = (page_id) => {
+
     fetch(api + 'get_orders_vendor', {
       method: 'POST',
       headers: {
@@ -1098,6 +1100,7 @@ class OngoingOrders extends Component {
                         <tr>
                           <th>Sno</th>
                           <th>Order ID</th>
+                          <th>Source</th>
                           <th>Order Type</th>
                           <th>Name</th>
                           <th>Contact</th>
@@ -1125,6 +1128,9 @@ class OngoingOrders extends Component {
                                   > */}
                                   {values.bill_no}
                                   {/* </Link> */}
+                                </td>
+                                <td>
+                                  {values.channel}
                                 </td>
                                 <td
                                   style={{

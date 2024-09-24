@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { AuthContext } from '../AuthContextProvider';
+
 import moment from 'moment';
 
 const BoldLastFourDigits = ({ number }) => {
@@ -13,8 +13,8 @@ const BoldLastFourDigits = ({ number }) => {
     </span>
   );
 };
-export class PrintReceipt extends Component {
-  static contextType = AuthContext;
+export class PrintReceipt2 extends Component {
+
   
 
 
@@ -32,8 +32,8 @@ export class PrintReceipt extends Component {
     return (
       <div id="invoice-POS">
         <center id="top">
-          {this.context.user.profile_pic != '' &&
-          this.context.user.logo_printed_on_bill == 1 ? (
+          {this.props.user.profile_pic != '' &&
+          this.props.user.logo_printed_on_bill == 1 ? (
             <img
               src={"https://cdn.myweazy.com/shop_pic/1724675850.jpeg"}
               alt="logo"
@@ -653,4 +653,4 @@ export class PrintReceipt extends Component {
   }
 }
 
-export default PrintReceipt;
+export default PrintReceipt2;
